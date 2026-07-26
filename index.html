@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="apple-touch-icon" href="img/icons/icon-192.png">
+    <link rel="icon" href="img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Finanças</h1>
+
+        <!-- Tela de LOGIN -->
+        <form id="formLogin" class="tela oculto">
+
+            <p>Entre com seu e-mail e senha.</p>
+
+            <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username" required>
+            <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password" required>
+
+            <p class="erro" id="erroLogin"></p>
+
+            <button type="submit">Entrar</button>
+
+            <a href="#" id="linkTrocarTela" class="link-secundario">Não tenho conta ainda</a>
+
+        </form>
+
+        <!-- Tela de CADASTRO -->
+        <form id="formCadastro" class="tela oculto">
+
+            <p>Crie sua conta com e-mail e senha.</p>
+
+            <input type="email" id="cadEmail" placeholder="E-mail" autocomplete="username" required>
+            <input type="password" id="cadSenha" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" required minlength="6">
+            <input type="password" id="cadConfirmar" placeholder="Confirmar senha" autocomplete="new-password" required minlength="6">
+
+            <p class="erro" id="erroCadastro"></p>
+
+            <button type="submit">Criar conta</button>
+
+        </form>
+
+    </div>
+
+    <script type="module" src="js/script.js"></script>
+    <script src="js/pwa.js"></script>
+
+</body>
+</html>
