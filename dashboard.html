@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/dashboard.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <div class="header-texto">
+
+        <h1>💰 Finanças</h1>
+
+        <p>Controle financeiro pessoal</p>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <!-- Acessos rápidos -->
+    <section class="acessos">
+
+        <a href="categorias.html" class="acesso">
+            <span>🏷️</span>
+            <small>Categorias</small>
+        </a>
+
+        <a href="orcamentos.html" class="acesso">
+            <span>📊</span>
+            <small>Orçamentos</small>
+        </a>
+
+    </section>
+
+    <!-- Patrimônio -->
+
+    <section class="card-principal patrimonio">
+
+        <span>💎 Patrimônio Total</span>
+
+        <h1 id="patrimonioTotal">R$ 0,00</h1>
+
+    </section>
+
+    <!-- Saldo -->
+
+    <section class="card-principal saldo">
+
+        <span>💳 Saldo Disponível</span>
+
+        <h1 id="saldoDisponivel">R$ 0,00</h1>
+
+    </section>
+
+    <!-- Resumo -->
+
+    <section class="cards-resumo">
+
+        <div class="card entrada">
+
+            <p>📈 Entradas</p>
+
+            <h3 id="totalEntradas">R$ 0,00</h3>
+
+        </div>
+
+        <div class="card despesa">
+
+            <p>💸 Despesas</p>
+
+            <h3 id="totalDespesas">R$ 0,00</h3>
+
+        </div>
+
+        <div class="card reserva">
+
+            <p>🏦 Reservas</p>
+
+            <h3 id="totalReservas">R$ 0,00</h3>
+
+        </div>
+
+        <div class="card investimento">
+
+            <p>📈 Investimentos</p>
+
+            <h3 id="totalInvestimentos">R$ 0,00</h3>
+
+        </div>
+
+    </section>
+
+    <!-- Contas -->
+
+    <section class="titulo">
+
+        <h2>💳 Contas</h2>
+
+    </section>
+
+    <section class="contas" id="listaContas">
+        <!-- Contas aparecerão aqui, geradas pelo dashboard.js -->
+    </section>
+
+    <!-- Metas -->
+
+    <section class="titulo">
+
+        <h2>🎯 Metas</h2>
+
+    </section>
+
+    <section class="metas" id="listaMetasDash">
+        <!-- Metas aparecerão aqui, geradas pelo dashboard.js -->
+    </section>
+    <!-- Últimas movimentações -->
+
+    <section class="titulo">
+
+        <h2>📜 Últimas movimentações</h2>
+
+    </section>
+
+    <section class="ultimas">
+
+        <div id="ultimasMovimentacoes">
+
+            <p class="sem-movimentacoes">
+                Nenhuma movimentação cadastrada.
+            </p>
+
+        </div>
+
+    </section>
+
+    <!-- Ações rápidas -->
+
+</main>
+
+<nav class="bottom-nav">
+
+    <a href="dashboard.html" class="active">
+
+        <span>🏠</span>
+
+        <small>Início</small>
+
+    </a>
+
+    <a href="historico.html">
+
+        <span>📜</span>
+
+        <small>Histórico</small>
+
+    </a>
+
+    <a href="adicionar.html" class="botao-centro">
+
+        +
+
+    </a>
+
+    <a href="metas.html">
+
+        <span>🎯</span>
+
+        <small>Metas</small>
+
+    </a>
+
+    <a href="bancos.html">
+
+        <span>🏦</span>
+
+        <small>Bancos</small>
+
+    </a>
+
+</nav>
+
+<script src="../js/dashboard.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+</body>
+
+</html>
