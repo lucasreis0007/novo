@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Relatórios</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/relatorios.css">
+
+</head>
+
+<body>
+
+<header>
+
+    <button class="voltar" onclick="window.location.href='dashboard.html'">←</button>
+
+    <h1>📈 Relatórios</h1>
+
+</header>
+
+<main class="container">
+
+    <section class="filtros">
+
+        <select id="filtroMes">
+            <option value="todos">Todos os meses</option>
+        </select>
+
+    </section>
+
+    <section class="resumo-periodo">
+
+        <div class="resumo-card entrada">
+            <p>📈 Entradas</p>
+            <h3 id="resumoEntradas">R$ 0,00</h3>
+        </div>
+
+        <div class="resumo-card despesa">
+            <p>💸 Despesas</p>
+            <h3 id="resumoDespesas">R$ 0,00</h3>
+        </div>
+
+        <div class="resumo-card saldo">
+            <p>💰 Saldo do período</p>
+            <h3 id="resumoSaldo">R$ 0,00</h3>
+        </div>
+
+    </section>
+
+    <section class="bloco-grafico">
+
+        <h2>Entradas x Despesas (últimos 6 meses)</h2>
+
+        <canvas id="graficoBarras" height="220"></canvas>
+
+    </section>
+
+    <section class="bloco-grafico">
+
+        <h2>Despesas por categoria</h2>
+
+        <canvas id="graficoRosca" height="260"></canvas>
+
+        <div id="legendaRosca" class="legenda"></div>
+
+    </section>
+
+</main>
+
+<script type="module" src="../js/relatorios.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+</body>
+
+</html>

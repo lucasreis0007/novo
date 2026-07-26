@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Orçamentos</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/orcamentos.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <button class="voltar" onclick="window.location.href='dashboard.html'">←</button>
+
+    <div class="header-texto">
+
+        <h1>📊 Orçamentos</h1>
+
+        <p>Defina limites de gasto por categoria</p>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <!-- Novo orçamento -->
+    <section class="card-form">
+
+        <h2>Novo orçamento</h2>
+
+        <form id="formOrcamento">
+
+            <div class="campo">
+                <label>Categoria</label>
+                <select id="categoriaOrcamento" required>
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label>Limite mensal (R$)</label>
+                <input type="number" id="limiteOrcamento" step="0.01" min="0.01" placeholder="0,00" required>
+            </div>
+
+            <button type="submit" class="btnSalvar">
+                💾 Criar orçamento
+            </button>
+
+        </form>
+
+    </section>
+
+    <!-- Lista de orçamentos -->
+    <section class="titulo">
+        <h2>Orçamentos deste mês</h2>
+    </section>
+
+    <section class="orcamentos" id="listaOrcamentos">
+        <!-- Orçamentos aparecerão aqui -->
+    </section>
+
+</main>
+
+<nav class="bottom-nav">
+
+    <a href="dashboard.html">
+        <span>🏠</span>
+        <small>Início</small>
+    </a>
+
+    <a href="historico.html">
+        <span>📜</span>
+        <small>Histórico</small>
+    </a>
+
+    <a href="adicionar.html" class="botao-centro">
+        +
+    </a>
+
+    <a href="metas.html">
+        <span>🎯</span>
+        <small>Metas</small>
+    </a>
+
+    <a href="bancos.html">
+        <span>🏦</span>
+        <small>Bancos</small>
+    </a>
+
+</nav>
+
+<script type="module" src="../js/orcamentos.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+</body>
+
+</html>
