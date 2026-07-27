@@ -1,4 +1,4 @@
-const CACHE_NOME = "financas-cache-v10";
+const CACHE_NOME = "financas-cache-v11";
 
 const ARQUIVOS_PARA_CACHE = [
     "./index.html",
