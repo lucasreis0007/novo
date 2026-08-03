@@ -54,7 +54,7 @@ body{
     margin:25px auto;
 }
 
-/* Formulário nova meta */
+/* Formulário */
 
 .card-form{
     background:white;
@@ -137,46 +137,81 @@ input:focus{
     background:#e5e5ea;
 }
 
+.campo-linha{
+    display:flex;
+    gap:12px;
+}
+
+.campo-linha .campo{
+    flex:1;
+}
+
+.orcamento-dica{
+    font-size:12.5px;
+    color:#888;
+    margin-top:-6px;
+}
+
+.orcamento-periodo{
+    font-size:13px;
+    color:#888;
+    margin-bottom:10px;
+}
+
 .titulo{
     margin:30px 0 15px;
 }
 
-/* Lista de metas */
+/* Lista de orçamentos */
 
-.metas{
+.orcamentos{
     display:grid;
     gap:18px;
 }
 
-.meta{
+.orcamento{
     background:white;
     border-radius:18px;
     padding:20px;
     box-shadow:0 5px 15px rgba(0,0,0,.08);
 }
 
-.meta-topo{
+.orcamento-topo{
     display:flex;
     justify-content:space-between;
     align-items:center;
     margin-bottom:10px;
 }
 
-.meta-titulo{
+.orcamento-titulo-bloco{
     display:flex;
-    align-items:center;
-    gap:10px;
+    flex-direction:column;
+    gap:4px;
+}
+
+.orcamento-mes{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:600;
+    color:#4F46E5;
+    background:#EEF2FF;
+    padding:3px 10px;
+    border-radius:50px;
+    width:fit-content;
+}
+
+.orcamento-titulo{
     font-weight:bold;
     font-size:17px;
 }
 
-.meta-acoes{
+.orcamento-acoes{
     display:flex;
     gap:6px;
 }
 
-.meta-excluir,
-.meta-editar{
+.orcamento-excluir,
+.orcamento-editar{
     border:none;
     background:none;
     font-size:18px;
@@ -185,12 +220,12 @@ input:focus{
     transition:.2s;
 }
 
-.meta-excluir:hover,
-.meta-editar:hover{
+.orcamento-excluir:hover,
+.orcamento-editar:hover{
     opacity:1;
 }
 
-.meta-valores{
+.orcamento-valores{
     display:flex;
     justify-content:space-between;
     color:#666;
@@ -198,7 +233,7 @@ input:focus{
     margin-bottom:10px;
 }
 
-.meta-valores strong{
+.orcamento-valores strong{
     color:#4F46E5;
 }
 
@@ -208,52 +243,28 @@ input:focus{
     background:#e5e7eb;
     border-radius:50px;
     overflow:hidden;
-    margin-bottom:14px;
+    margin-bottom:6px;
 }
 
 .progresso{
     height:100%;
     width:0%;
-    background:linear-gradient(90deg,#4F46E5,#6366F1);
+    background:linear-gradient(90deg,#16A34A,#22C55E);
     transition:width .3s;
 }
 
-.progresso.completa{
-    background:linear-gradient(90deg,#16A34A,#22C55E);
+.progresso.atencao{
+    background:linear-gradient(90deg,#F59E0B,#FBBF24);
 }
 
-.meta-aporte{
-    display:flex;
-    gap:10px;
+.progresso.estourou{
+    background:linear-gradient(90deg,#DC2626,#EF4444);
 }
 
-.meta-aporte input{
-    height:44px;
-    flex:1;
-}
-
-.meta-aporte button{
-    height:44px;
-    padding:0 18px;
-    border:none;
-    border-radius:12px;
-    background:#16A34A;
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-    transition:.2s;
-    white-space:nowrap;
-}
-
-.meta-aporte button:hover{
-    background:#15803D;
-}
-
-.meta-parabens{
-    text-align:center;
-    color:#16A34A;
-    font-weight:bold;
-    font-size:14px;
+.orcamento-aviso{
+    font-size:13px;
+    font-weight:600;
+    color:#DC2626;
 }
 
 .vazio{
@@ -265,7 +276,7 @@ input:focus{
     color:#777;
 }
 
-/* Bottom nav (igual ao resto do app) */
+/* Bottom nav */
 
 .bottom-nav{
     position:fixed;
@@ -316,10 +327,6 @@ input:focus{
 
     .header{
         padding:20px;
-    }
-
-    .meta-aporte{
-        flex-direction:column;
     }
 
 }
