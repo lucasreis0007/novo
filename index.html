@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="apple-touch-icon" href="img/icons/icon-192.png">
+    <link rel="icon" href="img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <img src="img/logo.png" alt="Finanças" class="logo-app">
+        <h1 class="oculto-visual">Finanças</h1>
+
+        <!-- Tela de LOGIN -->
+        <form id="formLogin" class="tela oculto">
+
+            <p>Entre com seu e-mail e senha.</p>
+
+            <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="username" required>
+
+            <div class="campo-senha">
+                <input type="password" id="loginSenha" placeholder="Senha" autocomplete="current-password" required>
+                <button type="button" class="toggle-senha" data-alvo="loginSenha" aria-label="Mostrar senha">
+                    <svg class="icone-olho-aberto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icone-olho-fechado oculto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.27 21.27 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.27 21.27 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
+            <p class="aviso-caps oculto" id="capsLoginSenha">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                Caps Lock está ativado
+            </p>
+
+            <p class="erro" id="erroLogin"></p>
+
+            <button type="submit">Entrar</button>
+
+            <a href="#" id="linkTrocarTela" class="link-secundario">Não tenho conta ainda</a>
+
+        </form>
+
+        <!-- Tela de CADASTRO -->
+        <form id="formCadastro" class="tela oculto">
+
+            <p>Crie sua conta com e-mail e senha.</p>
+
+            <input type="email" id="cadEmail" placeholder="E-mail" autocomplete="username" required>
+
+            <div class="campo-senha">
+                <input type="password" id="cadSenha" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" required minlength="6">
+                <button type="button" class="toggle-senha" data-alvo="cadSenha" aria-label="Mostrar senha">
+                    <svg class="icone-olho-aberto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icone-olho-fechado oculto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.27 21.27 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.27 21.27 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
+            <p class="aviso-caps oculto" id="capsCadSenha">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                Caps Lock está ativado
+            </p>
+
+            <div class="campo-senha">
+                <input type="password" id="cadConfirmar" placeholder="Confirmar senha" autocomplete="new-password" required minlength="6">
+                <button type="button" class="toggle-senha" data-alvo="cadConfirmar" aria-label="Mostrar senha">
+                    <svg class="icone-olho-aberto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="icone-olho-fechado oculto" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.27 21.27 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.27 21.27 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
+            <p class="aviso-caps oculto" id="capsCadConfirmar">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                Caps Lock está ativado
+            </p>
+
+            <p class="erro" id="erroCadastro"></p>
+
+            <button type="submit">Criar conta</button>
+
+            <a href="#" id="linkTrocarTelaCadastro" class="link-secundario">Já tenho conta, fazer login</a>
+
+        </form>
+
+    </div>
+
+    <script type="module" src="js/script.js"></script>
+    <script src="js/pwa.js"></script>
+
+</body>
+</html>
