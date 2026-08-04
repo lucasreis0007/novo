@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title id="tituloAba">Nova Movimentação</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/adicionar.css">
+
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="topo">
+
+        <button class="voltar" onclick="window.location.href='dashboard.html'">
+
+            ←
+
+        </button>
+
+        <div>
+
+            <h1 id="tituloTela">Nova movimentação</h1>
+
+            <p id="subtituloTela">Adicione uma entrada ou saída</p>
+
+        </div>
+
+    </header>
+
+    <form id="formMovimentacao">
+
+        <!-- Tipo -->
+
+        <div class="campo">
+
+            <label>Tipo</label>
+
+            <div class="tipo-container">
+
+                <button
+                    type="button"
+                    class="tipo entrada ativo"
+                    id="btnEntrada">
+
+                    💰 Entrada
+
+                </button>
+
+                <button
+                    type="button"
+                    class="tipo saida"
+                    id="btnSaida">
+
+                    💸 Saída
+
+                </button>
+
+                <button
+                    type="button"
+                    class="tipo rendimento"
+                    id="btnRendimento"
+                    title="Dinheiro que rendeu direto na reserva, sem sair de nenhuma conta">
+
+                    🌱 Rendimento
+
+                </button>
+
+            </div>
+
+            <p class="avisoRendimento" id="avisoRendimento" style="display:none;">
+                Esse valor é somado direto à sua reserva e não sai do saldo de nenhum banco.
+            </p>
+
+            <input
+                type="hidden"
+                id="tipo"
+                value="Entrada">
+
+        </div>
+
+        <!-- Banco -->
+
+        <div class="campo" id="campoBanco">
+
+            <label>Banco</label>
+
+            <select id="banco" required>
+
+                <option value="">Selecione</option>
+
+            </select>
+
+            <p class="saldoBanco">
+
+                Saldo disponível
+
+                <strong id="saldoBanco">
+
+                    R$ 0,00
+
+                </strong>
+
+            </p>
+
+        </div>
+
+        <!-- Categoria -->
+
+        <div class="campo" id="campoCategoria">
+
+            <label>Categoria</label>
+
+            <select id="categoria" required>
+
+            </select>
+
+        </div>
+
+        <!-- Valor -->
+
+        <div class="campo">
+
+            <label>Valor (R$)</label>
+
+            <input
+                type="number"
+                id="valor"
+                step="0.01"
+                min="0.01"
+                placeholder="0,00"
+                required>
+
+        </div>
+
+        <!-- Data -->
+
+        <div class="campo">
+
+            <label>Data</label>
+
+            <input
+                type="date"
+                id="data"
+                required>
+
+        </div>
+
+        <!-- Descrição -->
+
+        <div class="campo">
+
+            <label>Descrição (Opcional)</label>
+
+            <input
+                type="text"
+                id="descricao"
+                placeholder="Ex: Mercado BH">
+
+        </div>
+
+        <button
+            type="submit"
+            id="btnSalvar"
+            class="btnSalvar">
+
+            💾 Salvar movimentação
+
+        </button>
+
+        <button
+            type="button"
+            id="btnExcluirMov"
+            class="btnExcluir"
+            style="display:none;">
+
+            🗑️ Excluir movimentação
+
+        </button>
+
+    </form>
+
+</div>
+<script>
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+    console.log("Tela carregada");
+
+});
+
+</script>
+<script type="module" src="../js/adicionar.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+
+</html>
