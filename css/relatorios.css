@@ -1,0 +1,230 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f4f6fb;
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    background:linear-gradient(135deg,#4F46E5,#6366F1);
+    color:white;
+    padding:25px;
+    border-radius:0 0 25px 25px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+}
+
+.header-texto h1{
+    font-size:28px;
+}
+
+.header-texto p{
+    margin-top:5px;
+    opacity:.9;
+}
+
+.voltar{
+    width:42px;
+    height:42px;
+    flex-shrink:0;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.15);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.voltar:hover{
+    background:rgba(255,255,255,.28);
+}
+
+.container{
+    max-width:900px;
+    margin:30px auto;
+    padding:20px;
+}
+
+.filtros{
+    background:white;
+    padding:16px 20px;
+    border-radius:16px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    margin-bottom:20px;
+}
+
+.filtros select{
+    width:100%;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:15px;
+}
+
+.filtros select:focus{
+    outline:none;
+    border-color:#4F46E5;
+}
+
+.exportar-pdf h2{
+    font-size:17px;
+    color:#333;
+    margin-bottom:14px;
+}
+
+.grid-exportar{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.exportar-pdf .campo{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.exportar-pdf label{
+    font-size:12px;
+    color:#777;
+}
+
+.exportar-pdf input,
+.exportar-pdf select{
+    width:100%;
+    padding:10px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:14px;
+}
+
+.exportar-pdf input:focus,
+.exportar-pdf select:focus{
+    outline:none;
+    border-color:#4F46E5;
+}
+
+.btn-exportar{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:#4F46E5;
+    color:white;
+    font-size:15px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.btn-exportar:hover{
+    background:#4338CA;
+}
+
+.pdf-aviso{
+    margin-top:10px;
+    font-size:13px;
+    color:#dc2626;
+    text-align:center;
+}
+
+@media (max-width:600px){
+
+    .grid-exportar{
+        grid-template-columns:1fr;
+    }
+
+}
+
+.resumo-periodo{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:25px;
+}
+
+.resumo-card{
+    background:white;
+    border-radius:16px;
+    padding:16px;
+    text-align:center;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+}
+
+.resumo-card p{
+    color:#777;
+    font-size:13px;
+    margin-bottom:6px;
+}
+
+.resumo-card h3{
+    font-size:18px;
+}
+
+.resumo-card.entrada h3{ color:#16a34a; }
+.resumo-card.despesa h3{ color:#dc2626; }
+.resumo-card.saldo h3{ color:#4F46E5; }
+
+.bloco-grafico{
+    background:white;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    margin-bottom:25px;
+}
+
+.bloco-grafico h2{
+    font-size:17px;
+    color:#333;
+    margin-bottom:18px;
+}
+
+.bloco-grafico canvas{
+    width:100%;
+    max-width:100%;
+}
+
+.legenda{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 20px;
+    margin-top:18px;
+    justify-content:center;
+}
+
+.legenda-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    color:#444;
+}
+
+.legenda-bolinha{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    flex-shrink:0;
+}
+
+.sem-dados{
+    text-align:center;
+    color:#777;
+    padding:30px 0;
+}
+
+@media (max-width:600px){
+
+    .resumo-periodo{
+        grid-template-columns:1fr;
+    }
+
+}
