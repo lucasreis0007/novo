@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferir entre contas</title>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/adicionar.css">
+    <link rel="stylesheet" href="../css/transferencia.css">
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+<header class="header">
+    <button class="voltar" onclick="window.location.href='dashboard.html'">
+        ←
+    </button>
+    <div class="header-texto">
+        <h1>🔁 Transferir entre contas</h1>
+        <p>Mova um valor de uma conta para outra</p>
+    </div>
+</header>
+
+<main class="container">
+
+    <form id="formTransferencia">
+
+        <!-- Conta de origem -->
+        <div class="campo">
+            <label>De (conta de origem)</label>
+            <select id="contaOrigem" required>
+                <option value="">Selecione</option>
+            </select>
+            <p class="saldoBanco">
+                Saldo disponível
+                <strong id="saldoOrigem">R$ 0,00</strong>
+            </p>
+        </div>
+
+        <!-- Ícone de troca -->
+        <div class="icone-transferencia">⬇️</div>
+
+        <!-- Conta de destino -->
+        <div class="campo">
+            <label>Para (conta de destino)</label>
+            <select id="contaDestino" required>
+                <option value="">Selecione</option>
+            </select>
+            <p class="saldoBanco">
+                Saldo disponível
+                <strong id="saldoDestino">R$ 0,00</strong>
+            </p>
+        </div>
+
+        <p class="avisoTransferencia" id="avisoTransferencia"></p>
+
+        <!-- Valor -->
+        <div class="campo">
+            <label>Valor (R$)</label>
+            <input
+                type="number"
+                id="valor"
+                step="0.01"
+                min="0.01"
+                placeholder="0,00"
+                required>
+        </div>
+
+        <!-- Data -->
+        <div class="campo">
+            <label>Data</label>
+            <input type="date" id="data" required>
+        </div>
+
+        <!-- Descrição -->
+        <div class="campo">
+            <label>Descrição (Opcional)</label>
+            <input type="text" id="descricao" placeholder="Ex: Reserva de emergência">
+        </div>
+
+        <button type="submit" id="btnSalvar" class="btnSalvar">
+            🔁 Transferir
+        </button>
+
+    </form>
+
+</main>
+
+<script type="module" src="../js/transferencia.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+
+</html>

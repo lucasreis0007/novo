@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Controles</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/controles.css">
+
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <button class="voltar" onclick="window.location.href='dashboard.html'">←</button>
+
+    <div class="header-texto">
+        <h1>🎛️ Controles</h1>
+        <p>Acompanhe seus gastos por período, em detalhe</p>
+    </div>
+
+</header>
+
+<main class="container">
+
+    <section class="titulo">
+        <h2>🎛️ Controles</h2>
+    </section>
+
+    <section class="bloco-gastos">
+
+        <div class="filtros-gasto" id="filtrosGasto">
+            <button type="button" class="filtro-gasto-chip" data-filtro="hoje">Hoje</button>
+            <button type="button" class="filtro-gasto-chip" data-filtro="7dias">7 dias</button>
+            <button type="button" class="filtro-gasto-chip ativo" data-filtro="esteMes">Este mês</button>
+            <button type="button" class="filtro-gasto-chip" data-filtro="mesAnterior">Mês anterior</button>
+            <button type="button" class="filtro-gasto-chip" data-filtro="personalizado">Personalizado</button>
+        </div>
+
+        <div class="periodo-personalizado" id="periodoPersonalizado" style="display:none;">
+            <label>
+                De
+                <input type="date" id="personalizadoInicio">
+            </label>
+            <label>
+                Até
+                <input type="date" id="personalizadoFim">
+            </label>
+        </div>
+
+        <div class="gastos-fixos">
+            <div class="gasto-fixo">
+                <span>Hoje</span>
+                <strong id="gastoHojeFixo">R$ 0,00</strong>
+            </div>
+            <div class="gasto-fixo">
+                <span>7 dias</span>
+                <strong id="gasto7DiasFixo">R$ 0,00</strong>
+            </div>
+            <div class="gasto-fixo">
+                <span>Este mês</span>
+                <strong id="gastoMesFixo">R$ 0,00</strong>
+            </div>
+        </div>
+
+        <div class="gasto-total-card">
+            <span id="gastoTotalRotulo">Total gasto no período selecionado</span>
+            <h2 id="gastoTotalPeriodo">R$ 0,00</h2>
+            <p id="gastoComparacao" class="gasto-comparacao"></p>
+        </div>
+
+        <div class="gasto-detalhes-grid">
+            <div class="gasto-detalhe">
+                <span>📁 Categoria que mais gastei</span>
+                <strong id="gastoCategoriaTop">—</strong>
+            </div>
+            <div class="gasto-detalhe">
+                <span>🧾 Quantidade de despesas</span>
+                <strong id="gastoQuantidade">0</strong>
+            </div>
+            <div class="gasto-detalhe">
+                <span>📅 Média diária</span>
+                <strong id="gastoMedia">R$ 0,00</strong>
+            </div>
+            <div class="gasto-detalhe">
+                <span>🔺 Maior gasto</span>
+                <strong id="gastoMaior">—</strong>
+            </div>
+        </div>
+
+        <div class="gastos-por-categoria">
+            <h3>Gastos por categoria</h3>
+            <div id="listaGastosPorCategoria"></div>
+        </div>
+
+    </section>
+
+</main>
+
+<script type="module" src="../js/controles.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+
+</html>
