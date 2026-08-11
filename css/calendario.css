@@ -1,0 +1,382 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f4f6fb;
+    color:#222;
+    padding-bottom:40px;
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    background:linear-gradient(135deg,#4F46E5,#6366F1);
+    color:white;
+    padding:25px;
+    border-radius:0 0 25px 25px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+}
+
+.voltar{
+    width:42px;
+    height:42px;
+    padding:0;
+    box-sizing:border-box;
+    flex-shrink:0;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.15);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:.2s;
+}
+
+.voltar:hover{
+    background:rgba(255,255,255,.28);
+}
+
+.header-texto h1{
+    font-size:26px;
+}
+
+.header-texto p{
+    margin-top:5px;
+    opacity:.9;
+}
+
+.container{
+    max-width:600px;
+    margin:25px auto 0;
+    padding:0 20px 20px;
+}
+
+/* ---------------- SELETOR DE MÊS ---------------- */
+
+.seletor-mes{
+    background:white;
+    border-radius:18px;
+    padding:14px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    margin-bottom:18px;
+}
+
+.nav-mes{
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:12px;
+    background:#EEF0FD;
+    color:#4F46E5;
+    font-size:22px;
+    line-height:1;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.nav-mes:hover{
+    background:#dbe3ff;
+}
+
+.titulo-mes{
+    border:none;
+    background:none;
+    cursor:pointer;
+    font-size:19px;
+    font-weight:bold;
+    color:#333;
+    text-transform:capitalize;
+    padding:6px 10px;
+    border-radius:10px;
+    transition:.2s;
+}
+
+.titulo-mes:hover{
+    background:#f4f6fb;
+}
+
+/* ---------------- RESUMO DO MÊS ---------------- */
+
+.resumo-mes{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-bottom:18px;
+}
+
+.resumo-item{
+    background:white;
+    border-radius:16px;
+    padding:14px 16px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.resumo-item span{
+    font-size:13px;
+    color:#777;
+}
+
+.resumo-item strong{
+    font-size:18px;
+}
+
+.resumo-item.entrada strong{
+    color:#16a34a;
+}
+
+.resumo-item.despesa strong{
+    color:#dc2626;
+}
+
+/* ---------------- GRADE DO CALENDÁRIO ---------------- */
+
+.calendario{
+    background:white;
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    margin-bottom:20px;
+}
+
+.dias-semana{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    text-align:center;
+    font-size:12px;
+    color:#999;
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.grade-calendario{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+}
+
+.dia-cel{
+    position:relative;
+    aspect-ratio:1 / 1;
+    border:none;
+    background:none;
+    border-radius:12px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    transition:.15s;
+    color:#333;
+}
+
+.dia-cel:hover{
+    background:#f4f6fb;
+}
+
+.dia-cel .numero-dia{
+    font-size:14px;
+}
+
+.dia-cel.outro-mes{
+    color:#c7c9d6;
+}
+
+.dia-cel.dia-hoje .numero-dia{
+    color:#4F46E5;
+    font-weight:bold;
+}
+
+.dia-cel.dia-selecionado{
+    background:#4F46E5;
+}
+
+.dia-cel.dia-selecionado .numero-dia{
+    color:white;
+    font-weight:bold;
+}
+
+.pontos{
+    display:flex;
+    gap:3px;
+    height:5px;
+}
+
+.ponto{
+    width:5px;
+    height:5px;
+    border-radius:50%;
+}
+
+.ponto.entrada{
+    background:#16a34a;
+}
+
+.ponto.despesa{
+    background:#dc2626;
+}
+
+.dia-cel.dia-selecionado .ponto{
+    background:white;
+}
+
+/* ---------------- DIA SELECIONADO ---------------- */
+
+.dia-selecionado-cabecalho{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+}
+
+.dia-selecionado-cabecalho h2{
+    font-size:17px;
+    color:#333;
+    text-transform:capitalize;
+}
+
+.btnAdicionarDia{
+    background:#4F46E5;
+    color:white;
+    border:none;
+    padding:10px 16px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:bold;
+    transition:.2s;
+}
+
+.btnAdicionarDia:hover{
+    background:#4338CA;
+}
+
+#listaDia{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.movimentacaoDia{
+    background:white;
+    border-radius:16px;
+    padding:16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    transition:.2s;
+}
+
+.movimentacaoDia:hover{
+    transform:translateY(-2px);
+}
+
+.movimentacaoDia .info h3{
+    font-size:15px;
+    margin-bottom:6px;
+    color:#333;
+}
+
+.movimentacaoDia .info p{
+    color:#666;
+    font-size:13px;
+    margin:2px 0;
+}
+
+.movimentacaoDia .valor{
+    font-size:17px;
+    font-weight:bold;
+    flex-shrink:0;
+    margin-left:12px;
+}
+
+.movimentacaoDia .valor.entrada{
+    color:#16a34a;
+}
+
+.movimentacaoDia .valor.despesa{
+    color:#dc2626;
+}
+
+.movimentacaoDia .valor.reserva{
+    color:#d97706;
+}
+
+.movimentacaoDia .valor.investimento{
+    color:#6d28d9;
+}
+
+.acoesMovDia{
+    display:flex;
+    gap:6px;
+    margin-left:12px;
+    flex-shrink:0;
+}
+
+.acoesMovDia button{
+    width:34px;
+    height:34px;
+    padding:0;
+    border:none;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    cursor:pointer;
+    background:#f1f1fb;
+    transition:.2s;
+}
+
+.acoesMovDia .btnEditarDia{
+    background:#eef2ff;
+}
+
+.acoesMovDia .btnEditarDia:hover{
+    background:#dbe3ff;
+}
+
+.acoesMovDia .btnExcluirDia{
+    background:#fee2e2;
+}
+
+.acoesMovDia .btnExcluirDia:hover{
+    background:#fecaca;
+}
+
+.vazioDia{
+    background:white;
+    padding:30px 20px;
+    text-align:center;
+    border-radius:16px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    color:#777;
+    font-size:14px;
+}
+
+@media (max-width:480px){
+
+    .dia-cel .numero-dia{
+        font-size:13px;
+    }
+
+    .movimentacaoDia{
+        flex-wrap:wrap;
+    }
+
+}
