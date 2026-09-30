@@ -11,97 +11,6 @@ const categoriasSalvas = JSON.parse(localStorage.getItem("categorias")) || {};
 const movimentacoes =
     JSON.parse(localStorage.getItem("movimentacoes")) || [];
 
-let saldoDisponivel = 0;
-let patrimonioTotal = 0;
-
-let entradas = 0;
-let despesas = 0;
-let reservas = 0;
-let investimentos = 0;
-
-movimentacoes.forEach((mov) => {
-
-    // Transferência entre contas próprias: dinheiro sai de um banco e
-    // entra em outro, mas não é receita nem despesa de verdade, então
-    // não deve contar em "entradas"/"despesas" — só passa pelo saldo
-    // disponível (que fica igual no total, já que uma perna soma e a
-    // outra subtrai o mesmo valor).
-    if (mov.natureza === "Transferência") {
-
-        if (mov.tipo === "Entrada") {
-            saldoDisponivel += mov.valor;
-        } else {
-            saldoDisponivel -= mov.valor;
-        }
-
-        // Retirada da meta: o valor entra na conta (acima) e sai da meta
-        // (o total de metas é calculado a partir das próprias metas).
-        // Não mexe em "reservas".
-
-        return;
-    }
-
-    // Rendimento: dinheiro que a reserva já rendeu sozinha (juros,
-    // rendimento de conta digital etc). Só soma na reserva — nunca
-    // esteve no saldo disponível, então não mexe em banco nenhum.
-    if (mov.natureza === "Rendimento") {
-        reservas += mov.valor;
-        return;
-    }
-
-    // Retirada da reserva: sai da reserva e entra no saldo disponível
-    // (aparece nas opções de Entrada, mas checamos pela natureza aqui
-    // pra continuar funcionando com lançamentos antigos salvos como
-    // Saída também).
-    if (mov.natureza === "Resgate") {
-        reservas -= mov.valor;
-        entradas += mov.valor;
-        saldoDisponivel += mov.valor;
-        return;
-    }
-
-    if (mov.tipo === "Entrada") {
-
-        entradas += mov.valor;
-
-        saldoDisponivel += mov.valor;
-
-    } else {
-
-        switch (mov.natureza) {
-
-            case "Despesa":
-                despesas += mov.valor;
-                saldoDisponivel -= mov.valor;
-                break;
-
-            case "Reserva":
-                reservas += mov.valor;
-                saldoDisponivel -= mov.valor;
-                break;
-
-            case "Investimento":
-                investimentos += mov.valor;
-                saldoDisponivel -= mov.valor;
-                break;
-
-            // Aporte em meta: sai da conta e vai para a meta. Fica numa
-            // seção própria (Metas), separada das Reservas.
-            case "Meta":
-                saldoDisponivel -= mov.valor;
-                break;
-        }
-
-    }
-
-});
-
-const totalMetas = (JSON.parse(localStorage.getItem("metas")) || [])
-    .reduce((soma, meta) => soma + Number(meta.valorAtual || 0), 0);
-
-patrimonioTotal =
-    saldoDisponivel + reservas + investimentos + totalMetas;
-
 function moeda(valor) {
 
     return valor.toLocaleString("pt-BR", {
@@ -111,14 +20,199 @@ function moeda(valor) {
 
 }
 
-document.getElementById("patrimonioTotal").textContent = moeda(patrimonioTotal);
-document.getElementById("saldoDisponivel").textContent = moeda(saldoDisponivel);
+function formatarDataBR(iso) {
+    const [ano, mes, dia] = iso.split("-");
+    return `${dia}/${mes}/${ano}`;
+}
 
-document.getElementById("totalEntradas").textContent = moeda(entradas);
-document.getElementById("totalDespesas").textContent = moeda(despesas);
-document.getElementById("totalReservas").textContent = moeda(reservas);
-document.getElementById("totalMetas").textContent = moeda(totalMetas);
-document.getElementById("totalInvestimentos").textContent = moeda(investimentos);
+// ---------------- RESUMO (com filtro de período) ----------------
+// Sem filtro: números desde o primeiro dia (como sempre foi).
+// Com filtro ("de" / "até"): só entram as movimentações dentro do
+// período, e Patrimônio/Saldo passam a mostrar a VARIAÇÃO no período
+// (quanto subiu ou desceu), já que o total acumulado não faz sentido
+// recortado por data.
+
+function atualizarResumo(inicio, fim) {
+
+    const filtrando = Boolean(inicio || fim);
+
+    const lista = movimentacoes.filter(mov => {
+
+        if (!filtrando) return true;
+
+        const dia = mov.data || "";
+
+        if (inicio && dia < inicio) return false;
+        if (fim && dia > fim) return false;
+
+        return true;
+    });
+
+    let saldoDisponivel = 0;
+    let patrimonioTotal = 0;
+
+    let entradas = 0;
+    let despesas = 0;
+    let reservas = 0;
+    let investimentos = 0;
+
+    lista.forEach((mov) => {
+
+        // Transferência entre contas próprias: dinheiro sai de um banco e
+        // entra em outro, mas não é receita nem despesa de verdade, então
+        // não deve contar em "entradas"/"despesas" — só passa pelo saldo
+        // disponível (que fica igual no total, já que uma perna soma e a
+        // outra subtrai o mesmo valor).
+        if (mov.natureza === "Transferência") {
+
+            if (mov.tipo === "Entrada") {
+                saldoDisponivel += mov.valor;
+            } else {
+                saldoDisponivel -= mov.valor;
+            }
+
+            // Retirada da meta: o valor entra na conta (acima) e sai da meta
+            // (o total de metas é calculado a partir das próprias metas).
+            // Não mexe em "reservas".
+
+            return;
+        }
+
+        // Rendimento: dinheiro que a reserva já rendeu sozinha (juros,
+        // rendimento de conta digital etc). Só soma na reserva — nunca
+        // esteve no saldo disponível, então não mexe em banco nenhum.
+        if (mov.natureza === "Rendimento") {
+            reservas += mov.valor;
+            return;
+        }
+
+        // Retirada da reserva: sai da reserva e entra no saldo disponível
+        // (aparece nas opções de Entrada, mas checamos pela natureza aqui
+        // pra continuar funcionando com lançamentos antigos salvos como
+        // Saída também).
+        if (mov.natureza === "Resgate") {
+            reservas -= mov.valor;
+            entradas += mov.valor;
+            saldoDisponivel += mov.valor;
+            return;
+        }
+
+        if (mov.tipo === "Entrada") {
+
+            entradas += mov.valor;
+
+            saldoDisponivel += mov.valor;
+
+        } else {
+
+            switch (mov.natureza) {
+
+                case "Despesa":
+                    despesas += mov.valor;
+                    saldoDisponivel -= mov.valor;
+                    break;
+
+                case "Reserva":
+                    reservas += mov.valor;
+                    saldoDisponivel -= mov.valor;
+                    break;
+
+                case "Investimento":
+                    investimentos += mov.valor;
+                    saldoDisponivel -= mov.valor;
+                    break;
+
+                // Aporte em meta: sai da conta e vai para a meta. Fica numa
+                // seção própria (Metas), separada das Reservas.
+                case "Meta":
+                    saldoDisponivel -= mov.valor;
+                    break;
+            }
+
+        }
+
+    });
+
+    // Metas: sem filtro, é o que está guardado hoje em cada meta. Com
+    // filtro, é quanto entrou (aportes) menos o que saiu (retiradas) no
+    // período.
+    const totalMetas = filtrando
+        ? lista.reduce((soma, mov) => {
+            if (mov.natureza === "Meta") return soma + Number(mov.valor);
+            if (mov.natureza === "Transferência" && mov.metaId) return soma - Number(mov.valor);
+            return soma;
+        }, 0)
+        : (JSON.parse(localStorage.getItem("metas")) || [])
+            .reduce((soma, meta) => soma + Number(meta.valorAtual || 0), 0);
+
+    patrimonioTotal =
+        saldoDisponivel + reservas + investimentos + totalMetas;
+
+    document.getElementById("rotuloPatrimonio").textContent =
+        filtrando ? "💎 Variação do patrimônio no período" : "💎 Patrimônio Total";
+
+    document.getElementById("rotuloSaldo").textContent =
+        filtrando ? "💳 Variação do saldo no período" : "💳 Saldo Disponível";
+
+    const aviso = document.getElementById("avisoPeriodo");
+
+    if (filtrando) {
+        const de = inicio ? formatarDataBR(inicio) : "o início";
+        const ate = fim ? formatarDataBR(fim) : "hoje";
+        aviso.textContent = `Mostrando de ${de} até ${ate}`;
+        aviso.style.display = "block";
+    } else {
+        aviso.textContent = "";
+        aviso.style.display = "none";
+    }
+
+    document.getElementById("patrimonioTotal").textContent = moeda(patrimonioTotal);
+    document.getElementById("saldoDisponivel").textContent = moeda(saldoDisponivel);
+
+    document.getElementById("totalEntradas").textContent = moeda(entradas);
+    document.getElementById("totalDespesas").textContent = moeda(despesas);
+    document.getElementById("totalReservas").textContent = moeda(reservas);
+    document.getElementById("totalMetas").textContent = moeda(totalMetas);
+    document.getElementById("totalInvestimentos").textContent = moeda(investimentos);
+}
+
+const filtroInicio = document.getElementById("filtroInicio");
+const filtroFim = document.getElementById("filtroFim");
+
+function aplicarFiltro() {
+
+    if (filtroInicio.value && filtroFim.value && filtroInicio.value > filtroFim.value) {
+        alert("A data inicial não pode ser depois da data final.");
+        return;
+    }
+
+    atualizarResumo(filtroInicio.value, filtroFim.value);
+}
+
+document.getElementById("btnFiltrarPeriodo").addEventListener("click", aplicarFiltro);
+
+document.getElementById("btnMesAtual").addEventListener("click", () => {
+
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+    const ultimoDia = String(new Date(ano, hoje.getMonth() + 1, 0).getDate()).padStart(2, "0");
+
+    filtroInicio.value = `${ano}-${mes}-01`;
+    filtroFim.value = `${ano}-${mes}-${ultimoDia}`;
+
+    aplicarFiltro();
+});
+
+document.getElementById("btnLimparPeriodo").addEventListener("click", () => {
+
+    filtroInicio.value = "";
+    filtroFim.value = "";
+
+    atualizarResumo("", "");
+});
+
+atualizarResumo("", "");
 
 // ---------------- CONTAS (BANCOS) ----------------
 
