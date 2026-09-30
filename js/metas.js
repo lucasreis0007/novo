@@ -151,6 +151,7 @@ function renderizarMetas() {
                     </select>
                     <input type="number" step="0.01" min="0.01" placeholder="Valor do aporte" data-id="${meta.id}" class="inputAporte">
                     <button type="button" data-id="${meta.id}" class="btnAporte">💰 Adicionar</button>
+                    <button type="button" data-id="${meta.id}" class="btnRendimentoMeta" title="Dinheiro que a meta rendeu sozinha, sem sair de nenhuma conta">🌱 Rendimento</button>
                 </div>
                 `
             }
@@ -174,6 +175,13 @@ function renderizarMetas() {
     });
 
     // Botões de aporte
+    // Botões de rendimento
+    document.querySelectorAll(".btnRendimentoMeta").forEach(botao => {
+        botao.addEventListener("click", () => {
+            adicionarRendimento(Number(botao.dataset.id));
+        });
+    });
+
     document.querySelectorAll(".btnAporte").forEach(botao => {
         botao.addEventListener("click", () => {
             adicionarAporte(Number(botao.dataset.id));
@@ -273,6 +281,47 @@ async function adicionarAporte(id) {
         valor,
         data: new Date().toLocaleDateString("en-CA"),
         descricao: `Aporte na meta ${meta.nome}`
+    });
+
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+    await salvarMetas(metas);
+
+    renderizarMetas();
+}
+
+// Rendimento: a meta rendeu com o tempo. É dinheiro novo (você realmente
+// ganhou), então NÃO sai de nenhuma conta: só aumenta o valor da meta e
+// o patrimônio. Fica registrado como lançamento pra aparecer no histórico.
+async function adicionarRendimento(id) {
+
+    const input = document.querySelector(`.inputAporte[data-id="${id}"]`);
+    const valor = Number(input.value);
+
+    if (!valor || valor <= 0) {
+        alert("Digite o valor do rendimento no campo de valor.");
+        return;
+    }
+
+    const metas = carregarMetas();
+
+    const meta = metas.find(m => m.id === id);
+
+    if (!meta) return;
+
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + valor) * 100) / 100;
+
+    const movimentacoes = JSON.parse(localStorage.getItem("movimentacoes")) || [];
+
+    movimentacoes.push({
+        id: Date.now(),
+        tipo: "Rendimento",
+        natureza: "RendimentoMeta",
+        metaId: meta.id,
+        banco: "",
+        categoria: `Rendimento da meta: ${meta.nome}`,
+        valor,
+        data: new Date().toLocaleDateString("en-CA"),
+        descricao: `Rendimento da meta ${meta.nome}`
     });
 
     await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));

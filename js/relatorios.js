@@ -80,6 +80,7 @@ function rotuloNatureza(mov) {
         if (mov.metaId) return "Retirada da meta";
         return mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada";
     }
+    if (mov.natureza === "RendimentoMeta") return "Rendimento da meta";
     if (mov.natureza === "Meta") return "Aporte na meta";
     if (mov.natureza === "Resgate") return textoNaturezaPdf.Resgate;
     if (mov.tipo === "Entrada") return "Entrada";
@@ -193,7 +194,7 @@ function gerarPdf() {
 
     resultado.forEach(mov => {
         if (mov.natureza === "Transferência") return;
-        if (mov.natureza === "Meta") return;
+        if (mov.natureza === "Meta" || mov.natureza === "RendimentoMeta") return;
         if (mov.tipo === "Entrada") {
             entradas += Number(mov.valor);
         } else {

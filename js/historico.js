@@ -20,7 +20,7 @@ function devolverValorParaMeta(mov) {
     if (!meta) return;
 
     // Retirada devolve o valor à meta; aporte tira o valor da meta.
-    const sentido = mov.natureza === "Meta" ? -1 : 1;
+    const sentido = ["Meta", "RendimentoMeta"].includes(mov.natureza) ? -1 : 1;
 
     meta.valorAtual = Math.round((Number(meta.valorAtual) + sentido * Number(mov.valor)) * 100) / 100;
 
@@ -183,6 +183,16 @@ function carregarMovimentacoes(){
             textoNatureza = mov.metaId
                 ? "Retirada da meta"
                 : (mov.tipo==="Entrada" ? "Transferência recebida" : "Transferência enviada");
+
+        }
+
+        else if(mov.natureza==="RendimentoMeta"){
+
+            classe="reserva";
+
+            sinal="🌱";
+
+            textoNatureza="Rendimento da meta";
 
         }
 

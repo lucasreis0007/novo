@@ -328,8 +328,8 @@ if (idEdicao !== null) {
     );
 
     // Aportes de meta são feitos na tela de Metas; aqui só dá pra excluir.
-    if (movimentacaoEditando && movimentacaoEditando.natureza === "Meta") {
-        alert("Aportes de meta são feitos na tela de Metas. Para desfazer, exclua o lançamento no Histórico.");
+    if (movimentacaoEditando && (movimentacaoEditando.natureza === "Meta" || movimentacaoEditando.natureza === "RendimentoMeta")) {
+        alert("Aportes e rendimentos de meta são feitos na tela de Metas. Para desfazer, exclua o lançamento no Histórico.");
         movimentacaoEditando = null;
         window.location.href = destinoAoVoltar();
     }
@@ -386,7 +386,7 @@ btnExcluirMov.addEventListener("click", async () => {
 
         if (metaOrigem) {
             metaOrigem.valorAtual = arredondar(
-                Number(metaOrigem.valorAtual) + (movimentacaoEditando.natureza === "Meta" ? -1 : 1) * Number(movimentacaoEditando.valor)
+                Number(metaOrigem.valorAtual) + (["Meta", "RendimentoMeta"].includes(movimentacaoEditando.natureza) ? -1 : 1) * Number(movimentacaoEditando.valor)
             );
             await salvarMetas(metasAtuais);
         }

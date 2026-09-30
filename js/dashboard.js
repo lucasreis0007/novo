@@ -81,6 +81,13 @@ function atualizarResumo(inicio, fim) {
         // Rendimento: dinheiro que a reserva já rendeu sozinha (juros,
         // rendimento de conta digital etc). Só soma na reserva — nunca
         // esteve no saldo disponível, então não mexe em banco nenhum.
+        // Rendimento de meta: dinheiro novo que a meta ganhou sozinha. Não
+        // sai de conta nenhuma (não mexe em saldo); já está no total de
+        // Metas, que vem do valor guardado em cada meta.
+        if (mov.natureza === "RendimentoMeta") {
+            return;
+        }
+
         if (mov.natureza === "Rendimento") {
             reservas += mov.valor;
             return;
@@ -138,7 +145,7 @@ function atualizarResumo(inicio, fim) {
     // período.
     const totalMetas = filtrando
         ? lista.reduce((soma, mov) => {
-            if (mov.natureza === "Meta") return soma + Number(mov.valor);
+            if (mov.natureza === "Meta" || mov.natureza === "RendimentoMeta") return soma + Number(mov.valor);
             if (mov.natureza === "Transferência" && mov.metaId) return soma - Number(mov.valor);
             return soma;
         }, 0)
@@ -399,6 +406,10 @@ function renderizarUltimasMovimentacoes() {
             textoNatureza = mov.metaId
                 ? "Retirada da meta"
                 : (mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada");
+        } else if (mov.natureza === "RendimentoMeta") {
+            classe = "meta-aporte-cor";
+            sinal = "🌱";
+            textoNatureza = "Rendimento da meta";
         } else if (mov.natureza === "Meta") {
             classe = "meta-aporte-cor";
             sinal = "🎯";
