@@ -1,11 +1,15 @@
-const CACHE_NOME = "financas-cache-v21";
+const CACHE_NOME = "financas-cache-v23";
 
 const ARQUIVOS_PARA_CACHE = [
+    "./",
     "./index.html",
     "./css/style.css",
     "./js/script.js",
     "./js/utils.js",
     "./js/firebase-config.js",
+    "./js/pwa.js",
+    "./js/nav-lateral.js",
+    "./css/nav-lateral.css",
     "./manifest.json",
 
     "./pages/dashboard.html",
@@ -44,16 +48,36 @@ const ARQUIVOS_PARA_CACHE = [
     "./css/relatorios.css",
     "./js/relatorios.js",
 
+    "./pages/calendario.html",
+    "./css/calendario.css",
+    "./js/calendario.js",
+
+    "./pages/configuracoes.html",
+    "./css/configuracoes.css",
+    "./js/configuracoes.js",
+
+    "./pages/transferencia.html",
+    "./css/transferencia.css",
+    "./js/transferencia.js",
+
+    "./img/logo.png",
     "./img/icons/icon-192.png",
     "./img/icons/icon-512.png"
 ];
 
-// Instala o service worker e guarda os arquivos em cache
+// Instala o service worker e guarda os arquivos em cache.
+// Cada arquivo é guardado separadamente: se um falhar, os outros
+// continuam (com addAll, um único erro cancelava a instalação inteira
+// e o app ficava preso numa versão antiga).
 self.addEventListener("install", (evento) => {
 
     evento.waitUntil(
         caches.open(CACHE_NOME).then((cache) => {
-            return cache.addAll(ARQUIVOS_PARA_CACHE);
+            return Promise.all(
+                ARQUIVOS_PARA_CACHE.map((arquivo) =>
+                    cache.add(arquivo).catch(() => {})
+                )
+            );
         })
     );
 
@@ -76,13 +100,38 @@ self.addEventListener("activate", (evento) => {
     self.clients.claim();
 });
 
-// Serve pelo cache primeiro; se não tiver, busca na rede
+// Rede primeiro, cache como reserva (offline).
+// Antes era "cache primeiro": o app instalado ficava preso em arquivos
+// antigos mesmo depois de atualizar o site. Agora sempre tenta pegar a
+// versão mais nova e só usa o cache se estiver sem internet.
+// Pedidos para outros sites (Firebase, Google) não passam pelo service
+// worker: o navegador cuida deles normalmente.
 self.addEventListener("fetch", (evento) => {
 
+    const pedido = evento.request;
+
+    if (pedido.method !== "GET") return;
+
+    const url = new URL(pedido.url);
+
+    if (url.origin !== self.location.origin) return;
+
     evento.respondWith(
-        caches.match(evento.request).then((respostaCache) => {
-            return respostaCache || fetch(evento.request);
-        })
+        fetch(pedido, { cache: "no-cache" })
+            .then((resposta) => {
+
+                if (resposta && resposta.ok) {
+                    const copia = resposta.clone();
+                    caches.open(CACHE_NOME).then((cache) => cache.put(pedido, copia));
+                }
+
+                return resposta;
+            })
+            .catch(() =>
+                caches.match(pedido).then((respostaCache) =>
+                    respostaCache || caches.match("./index.html")
+                )
+            )
     );
 });
 
