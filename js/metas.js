@@ -25,7 +25,7 @@ function carregarMetas() {
 }
 
 function salvarMetas(metas) {
-    localStorage.setItem("metas", JSON.stringify(metas));
+    return localStorage.setItem("metas", JSON.stringify(metas));
 }
 
 // Na primeira vez que a página é aberta, cria as duas metas
@@ -55,6 +55,25 @@ function seedMetasIniciais() {
     }
 }
 
+function carregarBancos() {
+
+    let bancos = JSON.parse(localStorage.getItem("bancos"));
+
+    if (bancos === null) {
+
+        bancos = [
+            { id: 1, nome: "Nubank", emoji: "🟣", cor: 0 },
+            { id: 2, nome: "Inter", emoji: "🟠", cor: 1 },
+            { id: 3, nome: "Mercado Pago", emoji: "⚫", cor: 2 },
+            { id: 4, nome: "Dinheiro", emoji: "🟢", cor: 3 }
+        ];
+
+        localStorage.setItem("bancos", JSON.stringify(bancos));
+    }
+
+    return bancos;
+}
+
 // ---------------- FORMATAÇÃO ----------------
 
 function moeda(valor) {
@@ -69,6 +88,10 @@ function moeda(valor) {
 function renderizarMetas() {
 
     const metas = carregarMetas();
+
+    const opcoesBancos = carregarBancos()
+        .map(b => `<option value="${b.nome}">${b.emoji} ${b.nome}</option>`)
+        .join("");
 
     listaMetas.innerHTML = "";
 
@@ -122,6 +145,10 @@ function renderizarMetas() {
                 ? `<p class="meta-parabens">🎉 Meta concluída!</p>`
                 : `
                 <div class="meta-aporte">
+                    <select data-id="${meta.id}" class="selectBancoAporte">
+                        <option value="">De qual conta?</option>
+                        ${opcoesBancos}
+                    </select>
                     <input type="number" step="0.01" min="0.01" placeholder="Valor do aporte" data-id="${meta.id}" class="inputAporte">
                     <button type="button" data-id="${meta.id}" class="btnAporte">💰 Adicionar</button>
                 </div>
@@ -158,7 +185,13 @@ function renderizarMetas() {
 
 function excluirMeta(id) {
 
-    if (!confirm("Deseja realmente excluir esta meta?")) return;
+    const metaExcluir = carregarMetas().find(m => m.id === id);
+
+    const aviso = metaExcluir && Number(metaExcluir.valorAtual) > 0
+        ? `Esta meta ainda tem ${moeda(Number(metaExcluir.valorAtual))} guardado. Se excluir, esse valor some do seu patrimônio. Retire o valor para uma conta antes, se quiser mantê-lo.\n\nExcluir mesmo assim?`
+        : "Deseja realmente excluir esta meta?";
+
+    if (!confirm(aviso)) return;
 
     const metas = carregarMetas().filter(meta => meta.id !== id);
 
@@ -201,10 +234,16 @@ function cancelarEdicaoMeta() {
 
 btnCancelarEdicaoMeta.addEventListener("click", cancelarEdicaoMeta);
 
-function adicionarAporte(id) {
+async function adicionarAporte(id) {
 
     const input = document.querySelector(`.inputAporte[data-id="${id}"]`);
+    const selectBanco = document.querySelector(`.selectBancoAporte[data-id="${id}"]`);
     const valor = Number(input.value);
+
+    if (!selectBanco.value) {
+        alert("Escolha de qual conta o dinheiro vai sair.");
+        return;
+    }
 
     if (!valor || valor <= 0) {
         alert("Digite um valor válido para o aporte.");
@@ -215,11 +254,30 @@ function adicionarAporte(id) {
 
     const meta = metas.find(m => m.id === id);
 
-    if (meta) {
-        meta.valorAtual += valor;
-    }
+    if (!meta) return;
 
-    salvarMetas(metas);
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + valor) * 100) / 100;
+
+    // O aporte é um lançamento de saída na conta escolhida (natureza
+    // "Meta"), ligado à meta. Assim a conta, a meta e o patrimônio
+    // continuam batendo, e a seção Reservas não é afetada.
+    const movimentacoes = JSON.parse(localStorage.getItem("movimentacoes")) || [];
+
+    movimentacoes.push({
+        id: Date.now(),
+        tipo: "Saída",
+        natureza: "Meta",
+        metaId: meta.id,
+        banco: selectBanco.value,
+        categoria: `Meta: ${meta.nome}`,
+        valor,
+        data: new Date().toLocaleDateString("en-CA"),
+        descricao: `Aporte na meta ${meta.nome}`
+    });
+
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+    await salvarMetas(metas);
+
     renderizarMetas();
 }
 

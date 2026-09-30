@@ -34,11 +34,9 @@ movimentacoes.forEach((mov) => {
             saldoDisponivel -= mov.valor;
         }
 
-        // Retirada da meta: o dinheiro sai da reserva (meta) e entra na
-        // conta, então o patrimônio total continua igual.
-        if (mov.metaId) {
-            reservas -= mov.valor;
-        }
+        // Retirada da meta: o valor entra na conta (acima) e sai da meta
+        // (o total de metas é calculado a partir das próprias metas).
+        // Não mexe em "reservas".
 
         return;
     }
@@ -86,14 +84,23 @@ movimentacoes.forEach((mov) => {
                 investimentos += mov.valor;
                 saldoDisponivel -= mov.valor;
                 break;
+
+            // Aporte em meta: sai da conta e vai para a meta. Fica numa
+            // seção própria (Metas), separada das Reservas.
+            case "Meta":
+                saldoDisponivel -= mov.valor;
+                break;
         }
 
     }
 
 });
 
+const totalMetas = (JSON.parse(localStorage.getItem("metas")) || [])
+    .reduce((soma, meta) => soma + Number(meta.valorAtual || 0), 0);
+
 patrimonioTotal =
-    saldoDisponivel + reservas + investimentos;
+    saldoDisponivel + reservas + investimentos + totalMetas;
 
 function moeda(valor) {
 
@@ -110,6 +117,7 @@ document.getElementById("saldoDisponivel").textContent = moeda(saldoDisponivel);
 document.getElementById("totalEntradas").textContent = moeda(entradas);
 document.getElementById("totalDespesas").textContent = moeda(despesas);
 document.getElementById("totalReservas").textContent = moeda(reservas);
+document.getElementById("totalMetas").textContent = moeda(totalMetas);
 document.getElementById("totalInvestimentos").textContent = moeda(investimentos);
 
 // ---------------- CONTAS (BANCOS) ----------------
@@ -297,6 +305,10 @@ function renderizarUltimasMovimentacoes() {
             textoNatureza = mov.metaId
                 ? "Retirada da meta"
                 : (mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada");
+        } else if (mov.natureza === "Meta") {
+            classe = "meta-aporte-cor";
+            sinal = "🎯";
+            textoNatureza = "Aporte na meta";
         } else if (mov.natureza === "Resgate") {
             classe = "entrada";
             sinal = "🏧";

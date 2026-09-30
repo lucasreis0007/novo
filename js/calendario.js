@@ -87,7 +87,10 @@ function devolverValorParaMeta(mov) {
 
     if (!meta) return;
 
-    meta.valorAtual = Math.round((Number(meta.valorAtual) + Number(mov.valor)) * 100) / 100;
+    // Retirada devolve o valor à meta; aporte tira o valor da meta.
+    const sentido = mov.natureza === "Meta" ? -1 : 1;
+
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + sentido * Number(mov.valor)) * 100) / 100;
 
     return localStorage.setItem("metas", JSON.stringify(metas));
 }
@@ -105,6 +108,10 @@ function classificarMovimentacao(mov) {
         return mov.tipo === "Entrada"
             ? { classe: "entrada", sinal: "⬇️", texto: "Transferência recebida" }
             : { classe: "despesa", sinal: "⬆️", texto: "Transferência enviada" };
+    }
+
+    if (mov.natureza === "Meta") {
+        return { classe: "reserva", sinal: "🎯", texto: "Aporte na meta" };
     }
 
     if (mov.natureza === "Resgate") {

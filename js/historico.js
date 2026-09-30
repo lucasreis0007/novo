@@ -19,7 +19,10 @@ function devolverValorParaMeta(mov) {
 
     if (!meta) return;
 
-    meta.valorAtual = Math.round((Number(meta.valorAtual) + Number(mov.valor)) * 100) / 100;
+    // Retirada devolve o valor à meta; aporte tira o valor da meta.
+    const sentido = mov.natureza === "Meta" ? -1 : 1;
+
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + sentido * Number(mov.valor)) * 100) / 100;
 
     localStorage.setItem("metas", JSON.stringify(metas));
 }
@@ -180,6 +183,16 @@ function carregarMovimentacoes(){
             textoNatureza = mov.metaId
                 ? "Retirada da meta"
                 : (mov.tipo==="Entrada" ? "Transferência recebida" : "Transferência enviada");
+
+        }
+
+        else if(mov.natureza==="Meta"){
+
+            classe="reserva";
+
+            sinal="🎯";
+
+            textoNatureza="Aporte na meta";
 
         }
 

@@ -327,6 +327,13 @@ if (idEdicao !== null) {
         mov => String(mov.id) === String(idEdicao)
     );
 
+    // Aportes de meta são feitos na tela de Metas; aqui só dá pra excluir.
+    if (movimentacaoEditando && movimentacaoEditando.natureza === "Meta") {
+        alert("Aportes de meta são feitos na tela de Metas. Para desfazer, exclua o lançamento no Histórico.");
+        movimentacaoEditando = null;
+        window.location.href = destinoAoVoltar();
+    }
+
     if (movimentacaoEditando) {
 
         document.getElementById("tituloAba").textContent = "Editar Movimentação";
@@ -379,7 +386,7 @@ btnExcluirMov.addEventListener("click", async () => {
 
         if (metaOrigem) {
             metaOrigem.valorAtual = arredondar(
-                Number(metaOrigem.valorAtual) + Number(movimentacaoEditando.valor)
+                Number(metaOrigem.valorAtual) + (movimentacaoEditando.natureza === "Meta" ? -1 : 1) * Number(movimentacaoEditando.valor)
             );
             await salvarMetas(metasAtuais);
         }
@@ -491,7 +498,6 @@ formulario.addEventListener("submit", async function (e) {
             if (mov.natureza === "Reserva") totalReservas += Number(mov.valor);
             if (mov.natureza === "Rendimento") totalReservas += Number(mov.valor);
             if (mov.natureza === "Resgate") totalReservas -= Number(mov.valor);
-            if (mov.natureza === "Transferência" && mov.metaId) totalReservas -= Number(mov.valor);
         });
 
         if (valor > totalReservas) {
