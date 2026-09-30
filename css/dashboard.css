@@ -164,6 +164,10 @@ body{
     border-left:6px solid #d97706;
 }
 
+.card.meta-card{
+    border-left:6px solid #0d9488;
+}
+
 .card.investimento{
     border-left:6px solid #6d28d9;
 }
@@ -351,6 +355,10 @@ body{
 
 .movimentacao .reserva{
     color:#d97706;
+}
+
+.movimentacao .meta-aporte-cor{
+    color:#0d9488;
 }
 
 .movimentacao .investimento{
