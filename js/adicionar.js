@@ -314,6 +314,7 @@ if (idEdicao === null && dataPreSelecionada) {
 // ---------------- MODO EDIÇÃO ----------------
 
 let movimentacaoEditando = null;
+let editandoAporteMeta = false;
 
 const btnExcluirMov = document.getElementById("btnExcluirMov");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -327,12 +328,12 @@ if (idEdicao !== null) {
         mov => String(mov.id) === String(idEdicao)
     );
 
-    // Aportes de meta são feitos na tela de Metas; aqui só dá pra excluir.
-    if (movimentacaoEditando && (movimentacaoEditando.natureza === "Meta" || movimentacaoEditando.natureza === "RendimentoMeta")) {
-        alert("Aportes e rendimentos de meta são feitos na tela de Metas. Para desfazer, exclua o lançamento no Histórico.");
-        movimentacaoEditando = null;
-        window.location.href = destinoAoVoltar();
-    }
+    // Aporte/rendimento de meta: tela simplificada (valor, data,
+    // descrição e, no aporte, a conta de origem).
+    editandoAporteMeta = Boolean(
+        movimentacaoEditando &&
+        ["Meta", "RendimentoMeta"].includes(movimentacaoEditando.natureza)
+    );
 
     if (movimentacaoEditando) {
 
@@ -342,7 +343,30 @@ if (idEdicao !== null) {
         btnSalvar.textContent = "💾 Salvar alterações";
         btnExcluirMov.style.display = "block";
 
-        if (movimentacaoEditando.natureza === "Resgate") {
+        if (editandoAporteMeta) {
+
+            const ehRendimentoMeta = movimentacaoEditando.natureza === "RendimentoMeta";
+
+            document.getElementById("tituloAba").textContent = ehRendimentoMeta ? "Editar rendimento" : "Editar aporte";
+            document.getElementById("tituloTela").textContent = ehRendimentoMeta ? "Editar rendimento da meta" : "Editar aporte na meta";
+            document.getElementById("subtituloTela").textContent = movimentacaoEditando.categoria || "";
+
+            // sem escolha de tipo nem de categoria: o tipo e a meta não mudam
+            btnEntrada.closest(".campo").style.display = "none";
+            campoCategoria.style.display = "none";
+            categoria.required = false;
+
+            if (ehRendimentoMeta) {
+                // rendimento não sai de conta nenhuma
+                campoBanco.style.display = "none";
+                banco.required = false;
+            } else {
+                popularBancos();
+                banco.value = movimentacaoEditando.banco;
+                atualizarSaldoBanco();
+            }
+
+        } else if (movimentacaoEditando.natureza === "Resgate") {
             btnEntrada.click();
         } else if (movimentacaoEditando.tipo === "Entrada") {
             btnEntrada.click();
@@ -352,11 +376,13 @@ if (idEdicao !== null) {
             btnSaida.click();
         }
 
-        popularBancos();
-        banco.value = movimentacaoEditando.banco;
-        atualizarSaldoBanco();
+        if (!editandoAporteMeta) {
+            popularBancos();
+            banco.value = movimentacaoEditando.banco;
+            atualizarSaldoBanco();
+        }
 
-        if (movimentacaoEditando.tipo !== "Rendimento") {
+        if (!editandoAporteMeta && movimentacaoEditando.tipo !== "Rendimento") {
             atualizarCategorias();
             categoria.value = movimentacaoEditando.metaId
                 ? PREFIXO_META + movimentacaoEditando.metaId
@@ -408,9 +434,82 @@ btnExcluirMov.addEventListener("click", async () => {
 
 // ---------------- SALVAR ----------------
 
+// Edição de aporte/rendimento de meta: muda valor, data, descrição e
+// (no aporte) a conta. A meta é ajustada pela diferença de valor.
+async function salvarEdicaoAporteMeta() {
+
+    const ehRendimentoMeta = movimentacaoEditando.natureza === "RendimentoMeta";
+
+    const valor = Number(document.getElementById("valor").value);
+    const data = document.getElementById("data").value;
+    const descricao = document.getElementById("descricao").value;
+
+    if (!valor || valor <= 0) {
+        alert("Digite um valor válido.");
+        return;
+    }
+
+    if (!ehRendimentoMeta && !banco.value) {
+        alert("Escolha a conta de onde o dinheiro saiu.");
+        return;
+    }
+
+    const metas = carregarMetas();
+
+    const meta = metas.find(
+        m => String(m.id) === String(movimentacaoEditando.metaId)
+    );
+
+    const diferenca = arredondar(valor - Number(movimentacaoEditando.valor));
+
+    if (meta && diferenca !== 0) {
+
+        const novoValorMeta = arredondar(Number(meta.valorAtual) + diferenca);
+
+        if (novoValorMeta < 0) {
+            alert(
+                `Essa alteração deixaria a meta "${meta.nome}" negativa, porque parte desse valor já foi retirada. Retire menos, ou ajuste a retirada antes.`
+            );
+            return;
+        }
+
+        meta.valorAtual = novoValorMeta;
+    }
+
+    const movimentacoes =
+        JSON.parse(localStorage.getItem("movimentacoes")) || [];
+
+    const index = movimentacoes.findIndex(
+        mov => String(mov.id) === String(idEdicao)
+    );
+
+    if (index === -1) return;
+
+    movimentacoes[index] = {
+        ...movimentacoes[index],
+        banco: ehRendimentoMeta ? "" : banco.value,
+        valor,
+        data,
+        descricao
+    };
+
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+
+    if (meta && diferenca !== 0) {
+        await salvarMetas(metas);
+    }
+
+    window.location.href = "historico.html";
+}
+
 formulario.addEventListener("submit", async function (e) {
 
     e.preventDefault();
+
+    if (editandoAporteMeta) {
+        await salvarEdicaoAporteMeta();
+        return;
+    }
 
     const ehRendimento = tipo.value === "Rendimento";
 
