@@ -46,11 +46,41 @@
 
 <main class="container">
 
+    <!-- Filtro de período -->
+
+    <section class="filtro-periodo">
+
+        <div class="filtro-campos">
+
+            <label>
+                De
+                <input type="date" id="filtroInicio">
+            </label>
+
+            <label>
+                Até
+                <input type="date" id="filtroFim">
+            </label>
+
+        </div>
+
+        <div class="filtro-botoes">
+
+            <button type="button" id="btnFiltrarPeriodo" class="btn-filtrar">Filtrar</button>
+            <button type="button" id="btnMesAtual" class="btn-filtro-sec">Este mês</button>
+            <button type="button" id="btnLimparPeriodo" class="btn-filtro-sec">Limpar</button>
+
+        </div>
+
+        <p id="avisoPeriodo" class="aviso-periodo" style="display:none;"></p>
+
+    </section>
+
     <!-- Patrimônio -->
 
     <section class="card-principal patrimonio">
 
-        <span>💎 Patrimônio Total</span>
+        <span id="rotuloPatrimonio">💎 Patrimônio Total</span>
 
         <h1 id="patrimonioTotal">R$ 0,00</h1>
 
@@ -60,7 +90,7 @@
 
     <section class="card-principal saldo">
 
-        <span>💳 Saldo Disponível</span>
+        <span id="rotuloSaldo">💳 Saldo Disponível</span>
 
         <h1 id="saldoDisponivel">R$ 0,00</h1>
 
