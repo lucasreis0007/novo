@@ -224,6 +224,7 @@ input:focus{
 
 .meta-aporte{
     display:flex;
+    flex-wrap:wrap;
     gap:10px;
 }
 
@@ -250,6 +251,14 @@ input:focus{
     cursor:pointer;
     transition:.2s;
     white-space:nowrap;
+}
+
+.meta-aporte .btnRendimentoMeta{
+    background:#0d9488;
+}
+
+.meta-aporte .btnRendimentoMeta:hover{
+    background:#0f766e;
 }
 
 .meta-aporte button:hover{
