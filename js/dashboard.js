@@ -34,6 +34,12 @@ movimentacoes.forEach((mov) => {
             saldoDisponivel -= mov.valor;
         }
 
+        // Retirada da meta: o dinheiro sai da reserva (meta) e entra na
+        // conta, então o patrimônio total continua igual.
+        if (mov.metaId) {
+            reservas -= mov.valor;
+        }
+
         return;
     }
 
@@ -287,8 +293,10 @@ function renderizarUltimasMovimentacoes() {
 
         if (mov.natureza === "Transferência") {
             classe = mov.tipo === "Entrada" ? "entrada" : "despesa";
-            sinal = mov.tipo === "Entrada" ? "⬇️" : "⬆️";
-            textoNatureza = mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada";
+            sinal = mov.metaId ? "🎯" : (mov.tipo === "Entrada" ? "⬇️" : "⬆️");
+            textoNatureza = mov.metaId
+                ? "Retirada da meta"
+                : (mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada");
         } else if (mov.natureza === "Resgate") {
             classe = "entrada";
             sinal = "🏧";

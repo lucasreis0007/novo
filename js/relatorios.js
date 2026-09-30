@@ -77,6 +77,7 @@ const textoNaturezaPdf = {
 
 function rotuloNatureza(mov) {
     if (mov.natureza === "Transferência") {
+        if (mov.metaId) return "Retirada da meta";
         return mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada";
     }
     if (mov.natureza === "Resgate") return textoNaturezaPdf.Resgate;

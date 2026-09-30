@@ -195,6 +195,24 @@ btnRendimento.addEventListener("click", () => {
 
 // ---------------- CATEGORIAS ----------------
 
+// ---------------- METAS (Retirada da meta) ----------------
+// Cada meta cadastrada aparece nas opções de Entrada como
+// "Retirada da meta: <nome>". O valor da opção é "meta:<id>".
+
+const PREFIXO_META = "meta:";
+
+function carregarMetas() {
+    return JSON.parse(localStorage.getItem("metas")) || [];
+}
+
+function salvarMetas(metas) {
+    return localStorage.setItem("metas", JSON.stringify(metas));
+}
+
+function arredondar(valor) {
+    return Math.round(Number(valor) * 100) / 100;
+}
+
 function atualizarCategorias() {
 
     const categorias = carregarCategorias();
@@ -222,6 +240,28 @@ function atualizarCategorias() {
             </option>
         `;
     });
+
+    // Uma opção por meta (só em Entrada): o dinheiro sai da meta e entra
+    // na conta escolhida, sem contar como receita.
+    if (tipo.value === "Entrada") {
+
+        const metas = carregarMetas();
+
+        if (metas.length > 0) {
+
+            const grupo = document.createElement("optgroup");
+            grupo.label = "Retirada da meta";
+
+            metas.forEach(meta => {
+                const opcao = document.createElement("option");
+                opcao.value = PREFIXO_META + meta.id;
+                opcao.textContent = `${meta.emoji || "🎯"} Retirada da meta: ${meta.nome}`;
+                grupo.appendChild(opcao);
+            });
+
+            categoria.appendChild(grupo);
+        }
+    }
 }
 
 // ---------------- SALDO DO BANCO ----------------
@@ -311,7 +351,9 @@ if (idEdicao !== null) {
 
         if (movimentacaoEditando.tipo !== "Rendimento") {
             atualizarCategorias();
-            categoria.value = movimentacaoEditando.categoria;
+            categoria.value = movimentacaoEditando.metaId
+                ? PREFIXO_META + movimentacaoEditando.metaId
+                : movimentacaoEditando.categoria;
         }
 
         document.getElementById("valor").value = movimentacaoEditando.valor;
@@ -326,6 +368,22 @@ btnExcluirMov.addEventListener("click", async () => {
 
     const confirmar = confirm("Tem certeza que deseja excluir essa movimentação?");
     if (!confirmar) return;
+
+    // Excluir uma retirada de meta devolve o valor para a meta.
+    if (movimentacaoEditando.metaId) {
+
+        const metasAtuais = carregarMetas();
+        const metaOrigem = metasAtuais.find(
+            m => String(m.id) === String(movimentacaoEditando.metaId)
+        );
+
+        if (metaOrigem) {
+            metaOrigem.valorAtual = arredondar(
+                Number(metaOrigem.valorAtual) + Number(movimentacaoEditando.valor)
+            );
+            await salvarMetas(metasAtuais);
+        }
+    }
 
     let movimentacoes =
         JSON.parse(localStorage.getItem("movimentacoes")) || [];
@@ -356,6 +414,38 @@ formulario.addEventListener("submit", async function (e) {
 
     const valor = Number(document.getElementById("valor").value);
 
+    // ---- Retirada da meta ----
+    // Ao editar uma retirada antiga, o valor dela volta pra meta antes
+    // de aplicar o novo (senão seria descontado duas vezes).
+    const metas = carregarMetas();
+
+    if (movimentacaoEditando && movimentacaoEditando.metaId) {
+
+        const metaAntiga = metas.find(
+            m => String(m.id) === String(movimentacaoEditando.metaId)
+        );
+
+        if (metaAntiga) {
+            metaAntiga.valorAtual = arredondar(
+                Number(metaAntiga.valorAtual) + Number(movimentacaoEditando.valor)
+            );
+        }
+    }
+
+    const metaSelecionada =
+        !ehRendimento &&
+        tipo.value === "Entrada" &&
+        categoria.value.startsWith(PREFIXO_META)
+            ? metas.find(m => String(m.id) === categoria.value.slice(PREFIXO_META.length))
+            : null;
+
+    if (metaSelecionada && valor > Number(metaSelecionada.valorAtual) + 0.001) {
+        alert(
+            `Saldo insuficiente na meta "${metaSelecionada.nome}". Você tem ${Number(metaSelecionada.valorAtual).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} guardado.`
+        );
+        return;
+    }
+
     let natureza = "Despesa";
 
     const categorias = carregarCategorias();
@@ -367,7 +457,12 @@ formulario.addEventListener("submit", async function (e) {
         c => c.natureza === "Resgate" && c.nome === categoria.value
     );
 
-    if (ehRendimento) {
+    if (metaSelecionada) {
+        // Não é receita nem despesa: o dinheiro só muda de lugar
+        // (meta → conta). Mesma natureza das transferências entre contas,
+        // que já ficam fora dos totais de receita/despesa.
+        natureza = "Transferência";
+    } else if (ehRendimento) {
         natureza = "Rendimento";
     } else if (categoriaResgate) {
         natureza = "Resgate";
@@ -396,6 +491,7 @@ formulario.addEventListener("submit", async function (e) {
             if (mov.natureza === "Reserva") totalReservas += Number(mov.valor);
             if (mov.natureza === "Rendimento") totalReservas += Number(mov.valor);
             if (mov.natureza === "Resgate") totalReservas -= Number(mov.valor);
+            if (mov.natureza === "Transferência" && mov.metaId) totalReservas -= Number(mov.valor);
         });
 
         if (valor > totalReservas) {
@@ -406,7 +502,9 @@ formulario.addEventListener("submit", async function (e) {
         }
     }
 
-    const categoriaSalva = ehRendimento ? "Rendimento da Reserva" : categoria.value;
+    const categoriaSalva = metaSelecionada
+        ? `Retirada da meta: ${metaSelecionada.nome}`
+        : ehRendimento ? "Rendimento da Reserva" : categoria.value;
     const bancoSalvo = ehRendimento ? "" : banco.value;
 
     if (movimentacaoEditando) {
@@ -423,6 +521,7 @@ formulario.addEventListener("submit", async function (e) {
                 natureza,
                 banco: bancoSalvo,
                 categoria: categoriaSalva,
+                metaId: metaSelecionada ? metaSelecionada.id : undefined,
                 valor,
                 data: document.getElementById("data").value,
                 descricao: document.getElementById("descricao").value
@@ -437,6 +536,7 @@ formulario.addEventListener("submit", async function (e) {
             natureza,
             banco: bancoSalvo,
             categoria: categoriaSalva,
+            metaId: metaSelecionada ? metaSelecionada.id : undefined,
             valor,
             data: document.getElementById("data").value,
             descricao: document.getElementById("descricao").value
@@ -448,6 +548,16 @@ formulario.addEventListener("submit", async function (e) {
     // espera o Firestore confirmar o salvamento antes de trocar de
     // página — antes disso, a navegação cancelava o envio no meio do
     // caminho e o lançamento nunca chegava a ser gravado
+    if (metaSelecionada) {
+        metaSelecionada.valorAtual = arredondar(
+            Number(metaSelecionada.valorAtual) - valor
+        );
+    }
+
+    if (metaSelecionada || (movimentacaoEditando && movimentacaoEditando.metaId)) {
+        await salvarMetas(metas);
+    }
+
     await localStorage.setItem(
         "movimentacoes",
         JSON.stringify(movimentacoes)

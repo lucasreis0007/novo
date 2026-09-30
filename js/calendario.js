@@ -78,9 +78,27 @@ function formatarMoeda(valor) {
     });
 }
 
+function devolverValorParaMeta(mov) {
+
+    if (!mov || !mov.metaId) return;
+
+    const metas = JSON.parse(localStorage.getItem("metas")) || [];
+    const meta = metas.find(m => String(m.id) === String(mov.metaId));
+
+    if (!meta) return;
+
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + Number(mov.valor)) * 100) / 100;
+
+    return localStorage.setItem("metas", JSON.stringify(metas));
+}
+
 // Classifica a movimentação do mesmo jeito que o Histórico, pra manter
 // os rótulos e cores consistentes em todo o app.
 function classificarMovimentacao(mov) {
+
+    if (mov.natureza === "Transferência" && mov.metaId) {
+        return { classe: "entrada", sinal: "🎯", texto: "Retirada da meta" };
+    }
 
     if (mov.natureza === "Transferência") {
 
@@ -271,6 +289,9 @@ function calcularResumoMes() {
         .filter(mov => (mov.data || "").startsWith(prefixo))
         .forEach(mov => {
 
+            // Retirada de meta só muda o dinheiro de lugar, não é receita.
+            if (mov.metaId) return;
+
             if (mov.tipo === "Entrada" || mov.natureza === "Resgate") {
                 entradas += Number(mov.valor);
             } else if (mov.tipo === "Saída") {
@@ -351,6 +372,10 @@ function renderizarDia() {
             if (!confirmar) return;
 
             const id = Number(btn.dataset.id);
+
+            // Excluir uma retirada de meta devolve o valor para a meta.
+            await devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
+
             movimentacoes = movimentacoes.filter(mov => mov.id !== id);
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));

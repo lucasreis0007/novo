@@ -10,6 +10,20 @@ const categoriasSalvas = JSON.parse(localStorage.getItem("categorias")) || {};
 
 const lista = document.getElementById("listaMovimentacoes");
 
+function devolverValorParaMeta(mov) {
+
+    if (!mov || !mov.metaId) return;
+
+    const metas = JSON.parse(localStorage.getItem("metas")) || [];
+    const meta = metas.find(m => String(m.id) === String(mov.metaId));
+
+    if (!meta) return;
+
+    meta.valorAtual = Math.round((Number(meta.valorAtual) + Number(mov.valor)) * 100) / 100;
+
+    localStorage.setItem("metas", JSON.stringify(metas));
+}
+
 const pesquisa = document.getElementById("pesquisa");
 
 const filtroBanco = document.getElementById("filtroBanco");
@@ -161,9 +175,11 @@ function carregarMovimentacoes(){
 
             classe = mov.tipo==="Entrada" ? "entrada" : "despesa";
 
-            sinal = mov.tipo==="Entrada" ? "⬇️" : "⬆️";
+            sinal = mov.metaId ? "🎯" : (mov.tipo==="Entrada" ? "⬇️" : "⬆️");
 
-            textoNatureza = mov.tipo==="Entrada" ? "Transferência recebida" : "Transferência enviada";
+            textoNatureza = mov.metaId
+                ? "Retirada da meta"
+                : (mov.tipo==="Entrada" ? "Transferência recebida" : "Transferência enviada");
 
         }
 
@@ -286,6 +302,9 @@ function carregarMovimentacoes(){
             if(!confirmar) return;
 
             const id = Number(btn.dataset.id);
+
+            // Excluir uma retirada de meta devolve o valor para a meta.
+            devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
 
             movimentacoes = movimentacoes.filter(mov => mov.id !== id);
 

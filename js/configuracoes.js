@@ -81,6 +81,8 @@ document.getElementById("btnExportarPdf").addEventListener("click", () => {
     let totalSaidas = 0;
 
     ordenadas.forEach(mov => {
+        // Retirada de meta só muda o dinheiro de lugar, não é receita.
+        if (mov.metaId) return;
         if (mov.tipo === "Entrada") totalEntradas += Number(mov.valor);
         else totalSaidas += Number(mov.valor);
     });
