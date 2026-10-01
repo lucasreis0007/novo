@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, ICONES_DISPONIVEIS, renderizarIcone } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -17,6 +17,36 @@ const btnSalvarMeta = document.getElementById("btnSalvarMeta");
 const btnCancelarEdicaoMeta = document.getElementById("btnCancelarEdicaoMeta");
 
 let metaEditandoId = null;
+
+// ---------------- ÍCONE DA META ----------------
+// Mesmos ícones da tela de Categorias. O escolhido (iconeId) aparece
+// nos lançamentos dessa meta no Histórico, Calendário e Dashboard.
+
+const seletorIconesMeta = document.getElementById("seletorIconesMeta");
+
+let iconeMetaSelecionado = null;
+
+function selecionarIconeMeta(id) {
+
+    iconeMetaSelecionado = id || null;
+
+    seletorIconesMeta.querySelectorAll(".opcao-icone").forEach(botao => {
+        botao.classList.toggle("selecionado", botao.dataset.icone === iconeMetaSelecionado);
+    });
+}
+
+seletorIconesMeta.innerHTML = ICONES_DISPONIVEIS.map(icone => `
+    <button type="button" class="opcao-icone" data-icone="${icone.id}" title="${icone.rotulo}">
+        ${renderizarIcone(icone.id, 36)}
+    </button>
+`).join("");
+
+seletorIconesMeta.querySelectorAll(".opcao-icone").forEach(botao => {
+    botao.addEventListener("click", () => {
+        // tocar de novo no mesmo ícone desmarca
+        selecionarIconeMeta(iconeMetaSelecionado === botao.dataset.icone ? null : botao.dataset.icone);
+    });
+});
 
 // ---------------- DADOS ----------------
 
@@ -119,7 +149,7 @@ function renderizarMetas() {
         card.innerHTML = `
             <div class="meta-topo">
                 <div class="meta-titulo">
-                    <span>${meta.emoji}</span>
+                    <span class="meta-titulo-icone">${meta.iconeId ? renderizarIcone(meta.iconeId, 28) : meta.emoji}</span>
                     <span>${meta.nome}</span>
                 </div>
                 <div class="meta-acoes">
@@ -220,6 +250,7 @@ function iniciarEdicaoMeta(id) {
     metaEditandoId = id;
 
     emojiInput.value = meta.emoji;
+    selecionarIconeMeta(meta.iconeId);
     nomeInput.value = meta.nome;
     valorObjetivoInput.value = meta.valorObjetivo;
     valorAtualInput.value = meta.valorAtual;
@@ -235,6 +266,7 @@ function cancelarEdicaoMeta() {
     metaEditandoId = null;
 
     formMeta.reset();
+    selecionarIconeMeta(null);
 
     btnSalvarMeta.textContent = "💾 Criar meta";
     btnCancelarEdicaoMeta.style.display = "none";
@@ -355,6 +387,7 @@ formMeta.addEventListener("submit", (e) => {
             metas[index] = {
                 ...metas[index],
                 emoji: emojiInput.value,
+                iconeId: iconeMetaSelecionado || undefined,
                 nome,
                 valorObjetivo,
                 valorAtual
@@ -366,6 +399,7 @@ formMeta.addEventListener("submit", (e) => {
         metas.push({
             id: Date.now(),
             emoji: emojiInput.value,
+            iconeId: iconeMetaSelecionado || undefined,
             nome,
             valorObjetivo,
             valorAtual
@@ -379,6 +413,7 @@ formMeta.addEventListener("submit", (e) => {
     btnCancelarEdicaoMeta.style.display = "none";
 
     formMeta.reset();
+    selecionarIconeMeta(null);
 
     renderizarMetas();
 });

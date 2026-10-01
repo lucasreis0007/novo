@@ -315,6 +315,37 @@ export function iconeCategoria(nomeCategoria, categorias) {
     return renderizarIcone(encontrado ? encontrado[1] : ICONE_PADRAO);
 }
 
+// Ícone de uma movimentação no Histórico/Calendário/Dashboard.
+// Lançamentos ligados a uma meta (aporte, retirada, rendimento) usam o
+// ícone que a pessoa escolheu pra meta (meta.iconeId). Se a meta não
+// tem ícone escolhido, ou o lançamento não é de meta, cai no ícone da
+// categoria como sempre.
+export function iconeMovimentacao(mov, categorias, metas) {
+
+    if (mov && ["Transferência", "Meta", "RendimentoMeta"].includes(mov.natureza)) {
+
+        const lista = metas || [];
+
+        let meta = mov.metaId != null
+            ? lista.find(m => String(m.id) === String(mov.metaId))
+            : null;
+
+        if (!meta) {
+            const partes = /^(?:Retirada da meta|Meta|Rendimento da meta): (.+)$/.exec(mov.categoria || "");
+
+            if (partes) {
+                meta = lista.find(m => m.nome === partes[1]);
+            }
+        }
+
+        if (meta && meta.iconeId && buscarIconePorId(meta.iconeId)) {
+            return renderizarIcone(meta.iconeId);
+        }
+    }
+
+    return iconeCategoria(mov.categoria, categorias);
+}
+
 // Igual iconeCategoria(), mas devolve emoji em vez de HTML — use essa
 // dentro de <option> de <select> (o navegador não renderiza HTML ali).
 export function iconeCategoriaTexto(nomeCategoria, categorias) {

@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -7,6 +7,9 @@ window.sair = sair;
 
 // Carregado uma vez só pra resolver os ícones personalizados das categorias.
 const categoriasSalvas = JSON.parse(localStorage.getItem("categorias")) || {};
+
+// Metas (pra mostrar o ícone escolhido nos lançamentos de meta).
+const metasParaIcone = JSON.parse(localStorage.getItem("metas")) || [];
 
 // ---------------- ELEMENTOS ----------------
 
@@ -78,21 +81,55 @@ function formatarMoeda(valor) {
     });
 }
 
-function devolverValorParaMeta(mov) {
+// Acha a meta ligada a um lançamento: pelo id e, se não achar, pelo nome
+// escrito na categoria (ex.: "Retirada da meta: CNH").
+function acharMetaDoLancamento(mov, metas) {
 
-    if (!mov || !mov.metaId) return;
+    let meta = mov.metaId != null
+        ? metas.find(m => String(m.id) === String(mov.metaId))
+        : null;
+
+    if (!meta) {
+        const partes = /^(?:Retirada da meta|Meta|Rendimento da meta): (.+)$/.exec(mov.categoria || "");
+
+        if (partes) {
+            meta = metas.find(m => m.nome === partes[1]);
+        }
+    }
+
+    return meta || null;
+}
+
+// Retirada devolve o valor à meta; aporte e rendimento tiram o valor da
+// meta. Devolve um resumo pra avisar a pessoa (ou null se o lançamento
+// não tem meta ligada).
+async function devolverValorParaMeta(mov) {
+
+    if (!mov || !["Transferência", "Meta", "RendimentoMeta"].includes(mov.natureza)) return null;
 
     const metas = JSON.parse(localStorage.getItem("metas")) || [];
-    const meta = metas.find(m => String(m.id) === String(mov.metaId));
+    const meta = acharMetaDoLancamento(mov, metas);
 
-    if (!meta) return;
+    if (!meta) return null;
 
-    // Retirada devolve o valor à meta; aporte tira o valor da meta.
     const sentido = ["Meta", "RendimentoMeta"].includes(mov.natureza) ? -1 : 1;
 
     meta.valorAtual = Math.round((Number(meta.valorAtual) + sentido * Number(mov.valor)) * 100) / 100;
 
-    return localStorage.setItem("metas", JSON.stringify(metas));
+    await localStorage.setItem("metas", JSON.stringify(metas));
+
+    return { nome: meta.nome, valor: Number(mov.valor), sentido, valorAtual: meta.valorAtual };
+}
+
+function avisoMetaAtualizada(resultado) {
+
+    if (!resultado) return;
+
+    const texto = resultado.sentido === 1
+        ? `${formatarMoeda(resultado.valor)} devolvido(s) à meta "${resultado.nome}".`
+        : `${formatarMoeda(resultado.valor)} retirado(s) da meta "${resultado.nome}".`;
+
+    alert(`${texto}\nAgora ela tem ${formatarMoeda(resultado.valorAtual)}.`);
 }
 
 // Classifica a movimentação do mesmo jeito que o Histórico, pra manter
@@ -354,7 +391,7 @@ function renderizarDia() {
 
         card.innerHTML = `
             <div class="info">
-                <h3>${iconeCategoria(mov.categoria, categoriasSalvas)} ${mov.categoria}</h3>
+                <h3>${iconeMovimentacao(mov, categoriasSalvas, metasParaIcone)} ${mov.categoria}</h3>
                 <p>${mov.descricao || "Sem descrição"}</p>
                 <p>${mov.banco || "Direto na reserva"} · ${texto}</p>
             </div>
@@ -385,13 +422,15 @@ function renderizarDia() {
             const id = Number(btn.dataset.id);
 
             // Excluir uma retirada de meta devolve o valor para a meta.
-            await devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
+            const resultadoMeta = await devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
 
             movimentacoes = movimentacoes.filter(mov => mov.id !== id);
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
 
             atualizarTudo();
+
+            avisoMetaAtualizada(resultadoMeta);
         });
     });
 }

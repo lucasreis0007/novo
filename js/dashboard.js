@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -7,6 +7,9 @@ window.sair = sair;
 
 // Carregado uma vez só pra resolver os ícones personalizados das categorias.
 const categoriasSalvas = JSON.parse(localStorage.getItem("categorias")) || {};
+
+// Metas (pra mostrar o ícone escolhido nos lançamentos de meta).
+const metasParaIcone = JSON.parse(localStorage.getItem("metas")) || [];
 
 const movimentacoes =
     JSON.parse(localStorage.getItem("movimentacoes")) || [];
@@ -445,7 +448,7 @@ function renderizarUltimasMovimentacoes() {
 
         card.innerHTML = `
             <div class="info">
-                <h3>${iconeCategoria(mov.categoria, categoriasSalvas)} ${mov.categoria}</h3>
+                <h3>${iconeMovimentacao(mov, categoriasSalvas, metasParaIcone)} ${mov.categoria}</h3>
                 <p>${mov.descricao || "Sem descrição"}</p>
                 <p>${mov.banco || "Direto na reserva"}</p>
                 <p>${mov.data}</p>
