@@ -79,10 +79,40 @@
             </div>
         </div>
 
+        <!-- Meta de gasto do mês (não depende do filtro) -->
+        <div class="meta-gasto-card" id="metaGastoCard">
+            <div class="meta-gasto-topo">
+                <span>🎯 Meta de gasto do mês</span>
+                <button type="button" id="btnEditarMetaGasto" class="btn-meta-gasto">✏️ Definir</button>
+            </div>
+
+            <div id="metaGastoConteudo"></div>
+
+            <div class="meta-gasto-edicao" id="metaGastoEdicao" style="display:none;">
+                <input type="number" id="metaGastoInput" step="0.01" min="0.01" placeholder="Quanto quer gastar por mês? (R$)">
+                <div class="meta-gasto-acoes">
+                    <button type="button" id="btnSalvarMetaGasto" class="btn-meta-salvar">💾 Salvar</button>
+                    <button type="button" id="btnRemoverMetaGasto" class="btn-meta-remover">Remover</button>
+                    <button type="button" id="btnCancelarMetaGasto" class="btn-meta-cancelar">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
         <div class="gasto-total-card">
             <span id="gastoTotalRotulo">Total gasto no período selecionado</span>
+            <p id="gastoPeriodoDatas" class="gasto-periodo-datas"></p>
             <h2 id="gastoTotalPeriodo">R$ 0,00</h2>
             <p id="gastoComparacao" class="gasto-comparacao"></p>
+        </div>
+
+        <!-- Contas a pagar ainda pendentes dentro do período -->
+        <div class="contas-pagar-card" id="contasPagarCard">
+            <div class="contas-pagar-topo">
+                <span>🔔 Contas a pagar no período</span>
+                <strong id="contasPagarTotal">R$ 0,00</strong>
+            </div>
+            <div id="contasPagarLista"></div>
+            <p class="contas-pagar-previsao" id="contasPagarPrevisao"></p>
         </div>
 
         <div class="gasto-detalhes-grid">
