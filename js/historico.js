@@ -53,9 +53,21 @@ async function devolverValorParaMeta(mov) {
     return { nome: meta.nome, valor: Number(mov.valor), sentido, valorAtual: meta.valorAtual };
 }
 
-function avisoMetaAtualizada(resultado) {
+function avisoMetaAtualizada(resultado, mov) {
 
-    if (!resultado) return;
+    if (!resultado) {
+
+        const pareceMeta = mov && (
+            mov.metaId != null ||
+            /^(Retirada da meta|Meta|Rendimento da meta): /.test(mov.categoria || "")
+        );
+
+        if (pareceMeta) {
+            alert("Esse lançamento era de uma meta, mas não encontrei a meta para devolver o valor. Acerte o valor em Metas (✏️).");
+        }
+
+        return;
+    }
 
     const texto = resultado.sentido === 1
         ? `${formatarMoeda(resultado.valor)} devolvido(s) à meta "${resultado.nome}".`
@@ -364,15 +376,25 @@ function carregarMovimentacoes(){
             const id = Number(btn.dataset.id);
 
             // Excluir uma retirada de meta devolve o valor para a meta.
-            const resultadoMeta = await devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
+            const movExcluida = movimentacoes.find(mov => mov.id === id);
+
+            const resultadoMeta = await devolverValorParaMeta(movExcluida);
 
             movimentacoes = movimentacoes.filter(mov => mov.id !== id);
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
 
+            // apaga o lembrete de empréstimo ligado a esse lançamento
+            const lembretesAtuais = JSON.parse(localStorage.getItem("lembretes")) || [];
+            const lembretesRestantes = lembretesAtuais.filter(l => String(l.movimentacaoId) !== String(id));
+
+            if (lembretesRestantes.length !== lembretesAtuais.length) {
+                await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
+            }
+
             carregarMovimentacoes();
 
-            avisoMetaAtualizada(resultadoMeta);
+            avisoMetaAtualizada(resultadoMeta, movExcluida);
 
         });
 
@@ -397,3 +419,9 @@ document
 });
 
 carregarMovimentacoes();
+
+// Selo de versão: serve só pra conferir que este arquivo está atualizado.
+document.body.insertAdjacentHTML(
+    "beforeend",
+    '<p style="text-align:center;font-size:11px;color:#aaa;margin:20px 0 90px;">histórico v31</p>'
+);

@@ -121,9 +121,21 @@ async function devolverValorParaMeta(mov) {
     return { nome: meta.nome, valor: Number(mov.valor), sentido, valorAtual: meta.valorAtual };
 }
 
-function avisoMetaAtualizada(resultado) {
+function avisoMetaAtualizada(resultado, mov) {
 
-    if (!resultado) return;
+    if (!resultado) {
+
+        const pareceMeta = mov && (
+            mov.metaId != null ||
+            /^(Retirada da meta|Meta|Rendimento da meta): /.test(mov.categoria || "")
+        );
+
+        if (pareceMeta) {
+            alert("Esse lançamento era de uma meta, mas não encontrei a meta para devolver o valor. Acerte o valor em Metas (✏️).");
+        }
+
+        return;
+    }
 
     const texto = resultado.sentido === 1
         ? `${formatarMoeda(resultado.valor)} devolvido(s) à meta "${resultado.nome}".`
@@ -422,15 +434,25 @@ function renderizarDia() {
             const id = Number(btn.dataset.id);
 
             // Excluir uma retirada de meta devolve o valor para a meta.
-            const resultadoMeta = await devolverValorParaMeta(movimentacoes.find(mov => mov.id === id));
+            const movExcluida = movimentacoes.find(mov => mov.id === id);
+
+            const resultadoMeta = await devolverValorParaMeta(movExcluida);
 
             movimentacoes = movimentacoes.filter(mov => mov.id !== id);
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
 
+            // apaga o lembrete de empréstimo ligado a esse lançamento
+            const qtdLembretes = lembretes.length;
+            lembretes = lembretes.filter(l => String(l.movimentacaoId) !== String(id));
+
+            if (lembretes.length !== qtdLembretes) {
+                await salvarLembretes();
+            }
+
             atualizarTudo();
 
-            avisoMetaAtualizada(resultadoMeta);
+            avisoMetaAtualizada(resultadoMeta, movExcluida);
         });
     });
 }
@@ -487,11 +509,11 @@ function renderizarLembretesDia() {
 
         card.innerHTML = `
             <div class="infoLembrete">
-                <h3>🔔 ${lembrete.titulo}</h3>
+                <h3>${lembrete.tipoLembrete === "receber" ? "💰" : "🔔"} ${lembrete.titulo}</h3>
                 ${lembrete.valor ? `<p>${formatarMoeda(lembrete.valor)}</p>` : ""}
                 <p>${lembrete.recorrente ? "Repete todo mês" : "Lembrete único"}</p>
                 ${lembrete.observacao ? `<p>${lembrete.observacao}</p>` : ""}
-                <span class="selo ${pago ? "pago" : "pendente"}">${pago ? "Pago" : "Pendente"}</span>
+                <span class="selo ${pago ? "pago" : "pendente"}">${lembrete.tipoLembrete === "receber" ? (pago ? "Recebido" : "A receber") : (pago ? "Pago" : "Pendente")}</span>
             </div>
             <div class="acoesLembreteCard">
                 <div class="linhaBotoes">
@@ -499,7 +521,7 @@ function renderizarLembretesDia() {
                     <button class="icone btnExcluirLembrete" data-id="${lembrete.id}" title="Excluir">🗑️</button>
                 </div>
                 <button class="btnPagarLembrete${pago ? " desfazer" : ""}" data-id="${lembrete.id}">
-                    ${pago ? "Desfazer" : "✅ Marcar como pago"}
+                    ${pago ? "Desfazer" : (lembrete.tipoLembrete === "receber" ? "✅ Marcar como recebido" : "✅ Marcar como pago")}
                 </button>
             </div>
         `;

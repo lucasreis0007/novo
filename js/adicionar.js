@@ -201,6 +201,59 @@ btnRendimento.addEventListener("click", () => {
 
 const PREFIXO_META = "meta:";
 
+// ---------------- EMPRÉSTIMO (lembrete de quem deve pagar) ----------------
+// Despesa na categoria "Empréstimo": você emprestou dinheiro pra alguém.
+// Pedimos quem vai pagar e quando, e criamos um lembrete (o mesmo do
+// Calendário/Dashboard, que não mexe no saldo) ligado a esse lançamento.
+
+const campoEmprestimo = document.getElementById("campoEmprestimo");
+const devedorInput = document.getElementById("devedor");
+const dataPagamentoEmprestimo = document.getElementById("dataPagamentoEmprestimo");
+
+function ehCategoriaEmprestimo(nome) {
+    return (nome || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .includes("emprestimo");
+}
+
+function carregarLembretes() {
+    return JSON.parse(localStorage.getItem("lembretes")) || [];
+}
+
+function somarDiasISO(dataISO, dias) {
+
+    const [ano, mes, dia] = (dataISO || "").split("-").map(Number);
+
+    const base = ano ? new Date(ano, mes - 1, dia) : new Date();
+
+    base.setDate(base.getDate() + dias);
+
+    return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
+}
+
+function emprestimoAtivo() {
+    return tipo.value === "Saída" && ehCategoriaEmprestimo(categoria.value);
+}
+
+function atualizarCampoEmprestimo() {
+
+    const ativo = emprestimoAtivo();
+
+    campoEmprestimo.style.display = ativo ? "flex" : "none";
+
+    devedorInput.required = ativo;
+    dataPagamentoEmprestimo.required = ativo;
+
+    // sugestão: 30 dias depois da data do lançamento
+    if (ativo && !dataPagamentoEmprestimo.value) {
+        dataPagamentoEmprestimo.value = somarDiasISO(document.getElementById("data").value, 30);
+    }
+}
+
+categoria.addEventListener("change", atualizarCampoEmprestimo);
+
 function carregarMetas() {
     return JSON.parse(localStorage.getItem("metas")) || [];
 }
@@ -262,6 +315,8 @@ function atualizarCategorias() {
             categoria.appendChild(grupo);
         }
     }
+
+    atualizarCampoEmprestimo();
 }
 
 // ---------------- SALDO DO BANCO ----------------
@@ -387,6 +442,17 @@ if (idEdicao !== null) {
             categoria.value = movimentacaoEditando.metaId
                 ? PREFIXO_META + movimentacaoEditando.metaId
                 : movimentacaoEditando.categoria;
+
+            atualizarCampoEmprestimo();
+
+            const lembreteVinculado = carregarLembretes().find(
+                l => String(l.movimentacaoId) === String(movimentacaoEditando.id)
+            );
+
+            if (lembreteVinculado) {
+                devedorInput.value = lembreteVinculado.devedor || "";
+                dataPagamentoEmprestimo.value = lembreteVinculado.data || dataPagamentoEmprestimo.value;
+            }
         }
 
         document.getElementById("valor").value = movimentacaoEditando.valor;
@@ -428,6 +494,16 @@ btnExcluirMov.addEventListener("click", async () => {
     // espera o Firestore confirmar antes de trocar de página, senão a
     // navegação cancela o salvamento antes dele terminar
     await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+
+    // apaga o lembrete de empréstimo ligado a esse lançamento
+    const lembretesAtuais = carregarLembretes();
+    const lembretesRestantes = lembretesAtuais.filter(
+        l => String(l.movimentacaoId) !== String(idEdicao)
+    );
+
+    if (lembretesRestantes.length !== lembretesAtuais.length) {
+        await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
+    }
 
     window.location.href = "historico.html";
 });
@@ -612,6 +688,16 @@ formulario.addEventListener("submit", async function (e) {
         : ehRendimento ? "Rendimento da Reserva" : categoria.value;
     const bancoSalvo = ehRendimento ? "" : banco.value;
 
+    const idMovSalva = movimentacaoEditando ? movimentacaoEditando.id : Date.now();
+
+    const criarLembreteEmprestimo = emprestimoAtivo();
+    const nomeDevedor = devedorInput.value.trim();
+
+    if (criarLembreteEmprestimo && !nomeDevedor) {
+        alert("Diga quem vai te pagar esse empréstimo.");
+        return;
+    }
+
     if (movimentacaoEditando) {
 
         const index = movimentacoes.findIndex(
@@ -636,7 +722,7 @@ formulario.addEventListener("submit", async function (e) {
     } else {
 
         const movimentacao = {
-            id: Date.now(),
+            id: idMovSalva,
             tipo: tipo.value,
             natureza,
             banco: bancoSalvo,
@@ -667,6 +753,47 @@ formulario.addEventListener("submit", async function (e) {
         "movimentacoes",
         JSON.stringify(movimentacoes)
     );
+
+    // Lembrete de quem deve pagar o empréstimo (criado, atualizado ou,
+    // se a categoria deixou de ser Empréstimo, removido).
+    const lembretes = carregarLembretes();
+    const indiceLembrete = lembretes.findIndex(
+        l => String(l.movimentacaoId) === String(idMovSalva)
+    );
+    let lembretesMudaram = false;
+
+    if (criarLembreteEmprestimo) {
+
+        const dataEmprestimo = document.getElementById("data").value.split("-").reverse().join("/");
+
+        const dadosLembrete = {
+            titulo: `Receber de ${nomeDevedor}`,
+            devedor: nomeDevedor,
+            valor,
+            recorrente: false,
+            data: dataPagamentoEmprestimo.value,
+            observacao: `Empréstimo de ${valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} feito em ${dataEmprestimo}`,
+            tipoLembrete: "receber",
+            movimentacaoId: idMovSalva
+        };
+
+        if (indiceLembrete === -1) {
+            lembretes.push({ id: Date.now() + 1, pagamentos: {}, ...dadosLembrete });
+        } else {
+            lembretes[indiceLembrete] = { ...lembretes[indiceLembrete], ...dadosLembrete };
+        }
+
+        lembretesMudaram = true;
+
+    } else if (indiceLembrete !== -1) {
+
+        lembretes.splice(indiceLembrete, 1);
+        lembretesMudaram = true;
+    }
+
+    if (lembretesMudaram) {
+        await localStorage.setItem("lembretes", JSON.stringify(lembretes));
+    }
 
     if (movimentacaoEditando) {
         window.location.href = "historico.html";

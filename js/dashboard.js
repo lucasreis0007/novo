@@ -731,7 +731,7 @@ function renderizarLembretesDashboard() {
 
             card.innerHTML = `
                 <div>
-                    <h3>🔔 ${lembrete.titulo}</h3>
+                    <h3>${lembrete.tipoLembrete === "receber" ? "💰" : "🔔"} ${lembrete.titulo}</h3>
                     <p>${rotuloData}</p>
                 </div>
                 ${lembrete.valor ? `<strong>${moeda(Number(lembrete.valor))}</strong>` : ""}
