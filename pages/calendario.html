@@ -103,6 +103,24 @@
                 <input type="number" id="lembreteValor" step="0.01" min="0" placeholder="0,00">
             </div>
 
+            <div class="campoLembrete" id="campoLembreteBanco">
+                <label>Conta (de onde sai quando pagar)</label>
+                <select id="lembreteBanco">
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+
+            <div class="campoLembrete" id="campoLembreteCategoria">
+                <label>Categoria</label>
+                <select id="lembreteCategoria">
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+
+            <p class="dicaLembrete" id="dicaLembrete">
+                💡 Ao marcar como pago, o valor é lançado sozinho nessa conta e categoria.
+            </p>
+
             <div class="campoLembrete">
                 <label class="checkboxLembrete">
                     <input type="checkbox" id="lembreteRecorrente" checked>
