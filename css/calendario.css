@@ -642,3 +642,61 @@ body{
     }
 
 }
+
+/* ---------------- PAGAMENTO AUTOMÁTICO ---------------- */
+
+.campoLembrete select{
+    padding:11px 12px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:15px;
+    background:white;
+}
+
+.campoLembrete select:focus{
+    outline:none;
+    border-color:#d97706;
+}
+
+.dicaLembrete{
+    font-size:12px;
+    color:#8a6d3b;
+    margin:-4px 0 0;
+}
+
+.modalPagamentoFundo{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:1000;
+}
+
+.modalPagamento{
+    background:white;
+    border-radius:18px;
+    padding:20px;
+    width:100%;
+    max-width:380px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.modalPagamento h3{
+    font-size:17px;
+    color:#333;
+}
+
+.modalPagamento p{
+    font-size:13px;
+    color:#666;
+}
+
+.modalPagamento .acoesLembrete{
+    display:flex;
+    gap:8px;
+}
