@@ -1,4 +1,4 @@
-const CACHE_NOME = "financas-cache-v24";
+const CACHE_NOME = "financas-cache-v29";
 
 const ARQUIVOS_PARA_CACHE = [
     "./",
@@ -88,16 +88,27 @@ self.addEventListener("install", (evento) => {
 self.addEventListener("activate", (evento) => {
 
     evento.waitUntil(
-        caches.keys().then((nomes) => {
-            return Promise.all(
-                nomes
-                    .filter((nome) => nome !== CACHE_NOME)
-                    .map((nome) => caches.delete(nome))
-            );
+        caches.keys().then(async (nomes) => {
+
+            const caches_antigos = nomes.filter((nome) => nome !== CACHE_NOME);
+
+            await Promise.all(caches_antigos.map((nome) => caches.delete(nome)));
+
+            await self.clients.claim();
+
+            // O app instalado na tela inicial (iPhone) tem cache próprio e
+            // ficava preso numa versão velha. Se havia uma versão anterior,
+            // recarrega as telas abertas pra já pegar a nova.
+            if (caches_antigos.length > 0) {
+
+                const telas = await self.clients.matchAll({ type: "window" });
+
+                telas.forEach((tela) => {
+                    try { tela.navigate(tela.url); } catch (erro) {}
+                });
+            }
         })
     );
-
-    self.clients.claim();
 });
 
 // Rede primeiro, cache como reserva (offline).

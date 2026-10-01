@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>Finanças</title>
 
     <link rel="manifest" href="manifest.json">
@@ -10,7 +10,18 @@
     <link rel="apple-touch-icon" href="img/icons/icon-192.png">
     <link rel="icon" href="img/icons/icon-192.png">
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=29">
+
+    <!-- Ajustes críticos do iPhone, direto no HTML: 16px evita o zoom
+         automático ao tocar no campo, mesmo se o style.css estiver em cache -->
+    <style>
+        input, select, textarea {
+            font-size: 16px !important;
+            -webkit-user-select: text;
+            user-select: text;
+            touch-action: manipulation;
+        }
+    </style>
 </head>
 
 <body>
@@ -21,7 +32,7 @@
         <h1 class="oculto-visual">Finanças</h1>
 
         <!-- Tela de LOGIN -->
-        <form id="formLogin" class="tela oculto">
+        <form id="formLogin" class="tela">
 
             <p>Entre com seu e-mail e senha.</p>
 
@@ -85,6 +96,8 @@
             <a href="#" id="linkTrocarTelaCadastro" class="link-secundario">Já tenho conta, fazer login</a>
 
         </form>
+
+        <p style="margin:18px 0 0;font-size:11px;color:#aaa;">v29</p>
 
     </div>
 
