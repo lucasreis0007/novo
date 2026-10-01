@@ -38,6 +38,12 @@ const lembreteObservacao = document.getElementById("lembreteObservacao");
 const btnSalvarLembrete = document.getElementById("btnSalvarLembrete");
 const btnCancelarLembrete = document.getElementById("btnCancelarLembrete");
 
+const lembreteBanco = document.getElementById("lembreteBanco");
+const lembreteCategoria = document.getElementById("lembreteCategoria");
+const campoLembreteBanco = document.getElementById("campoLembreteBanco");
+const campoLembreteCategoria = document.getElementById("campoLembreteCategoria");
+const dicaLembrete = document.getElementById("dicaLembrete");
+
 // ---------------- DADOS ----------------
 
 let movimentacoes = JSON.parse(localStorage.getItem("movimentacoes")) || [];
@@ -249,6 +255,231 @@ async function salvarLembretes() {
     await localStorage.setItem("lembretes", JSON.stringify(lembretes));
 }
 
+async function salvarMovimentacoes() {
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+}
+
+// ---------------- PAGAMENTO AUTOMÁTICO ----------------
+// Marcar um lembrete como pago cria sozinho o lançamento na conta:
+//  - conta minha (pagar): Saída na conta e categoria do lembrete;
+//  - empréstimo (receber): Entrada na conta de onde o dinheiro saiu.
+// O id do lançamento fica guardado em lembrete.pagamentos[chave], pra
+// "Desfazer" conseguir apagar exatamente o que foi criado.
+
+function ehLembreteReceber(lembrete) {
+    return lembrete.tipoLembrete === "receber";
+}
+
+function carregarBancos() {
+    return JSON.parse(localStorage.getItem("bancos")) || [];
+}
+
+function categoriasDeSaida() {
+
+    const saida = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
+
+    return saida.filter(c => c.natureza !== "Resgate");
+}
+
+function naturezaDaCategoria(nome) {
+
+    const achada = (categoriasSalvas.saida || []).find(c => c.nome === nome);
+
+    return achada ? achada.natureza : "Despesa";
+}
+
+function popularSelectBanco(select, valorAtual) {
+
+    select.innerHTML = '<option value="">Selecione</option>';
+
+    carregarBancos().forEach(item => {
+        const opcao = document.createElement("option");
+        opcao.value = item.nome;
+        opcao.textContent = `${item.emoji || ""} ${item.nome}`.trim();
+        select.appendChild(opcao);
+    });
+
+    select.value = valorAtual || "";
+}
+
+function popularSelectCategoria(select, valorAtual) {
+
+    select.innerHTML = '<option value="">Selecione</option>';
+
+    categoriasDeSaida().forEach(item => {
+        const opcao = document.createElement("option");
+        opcao.value = item.nome;
+        opcao.textContent = item.nome;
+        select.appendChild(opcao);
+    });
+
+    select.value = valorAtual || "";
+}
+
+// Pergunta só o que ficou faltando (valor, conta e/ou categoria) —
+// acontece com lembretes criados antes dessa função existir.
+function pedirDadosPagamento({ titulo, receber, valor, banco, categoria }) {
+
+    return new Promise(resolve => {
+
+        const precisaValor = !(Number(valor) > 0);
+        const precisaBanco = !banco;
+        const precisaCategoria = !receber && !categoria;
+
+        const fundo = document.createElement("div");
+        fundo.className = "modalPagamentoFundo";
+
+        fundo.innerHTML = `
+            <div class="modalPagamento">
+                <h3>${receber ? "Receber" : "Pagar"}: ${titulo}</h3>
+                <p>Preencha o que falta para lançar na sua conta.</p>
+
+                ${precisaValor ? `
+                    <div class="campoLembrete">
+                        <label>Valor</label>
+                        <input type="number" id="pagValor" step="0.01" min="0.01" placeholder="0,00">
+                    </div>` : ""}
+
+                ${precisaBanco ? `
+                    <div class="campoLembrete">
+                        <label>${receber ? "Conta que vai receber" : "Conta de onde sai"}</label>
+                        <select id="pagBanco"></select>
+                    </div>` : ""}
+
+                ${precisaCategoria ? `
+                    <div class="campoLembrete">
+                        <label>Categoria</label>
+                        <select id="pagCategoria"></select>
+                    </div>` : ""}
+
+                <div class="acoesLembrete">
+                    <button type="button" class="btnSalvarLembrete" id="pagConfirmar">Confirmar</button>
+                    <button type="button" class="btnCancelarLembrete" id="pagCancelar">Cancelar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(fundo);
+
+        const selBanco = fundo.querySelector("#pagBanco");
+        const selCategoria = fundo.querySelector("#pagCategoria");
+        const inputValor = fundo.querySelector("#pagValor");
+
+        if (selBanco) popularSelectBanco(selBanco, "");
+        if (selCategoria) popularSelectCategoria(selCategoria, "");
+
+        const fechar = resultado => {
+            fundo.remove();
+            resolve(resultado);
+        };
+
+        fundo.querySelector("#pagCancelar").addEventListener("click", () => fechar(null));
+
+        fundo.querySelector("#pagConfirmar").addEventListener("click", () => {
+
+            const novoValor = inputValor ? Number(inputValor.value) : Number(valor);
+            const novoBanco = selBanco ? selBanco.value : banco;
+            const novaCategoria = selCategoria ? selCategoria.value : categoria;
+
+            if (!(novoValor > 0)) { alert("Digite o valor."); return; }
+            if (!novoBanco) { alert("Escolha a conta."); return; }
+            if (!receber && !novaCategoria) { alert("Escolha a categoria."); return; }
+
+            fechar({ valor: novoValor, banco: novoBanco, categoria: novaCategoria });
+        });
+    });
+}
+
+async function marcarComoPago(lembrete, dataISO) {
+
+    lembrete.pagamentos = lembrete.pagamentos || {};
+
+    const chave = chaveOcorrencia(lembrete, dataISO);
+
+    // ---- Desfazer: apaga o lançamento que foi criado automaticamente ----
+    if (lembrete.pagamentos[chave]) {
+
+        const idMov = lembrete.pagamentos[chave];
+
+        const movCriada = movimentacoes.find(mov =>
+            String(mov.id) === String(idMov) ||
+            (mov.lembreteId === lembrete.id && mov.lembreteChave === chave)
+        );
+
+        if (movCriada) {
+
+            const confirmar = confirm(
+                `Desfazer? O lançamento de ${formatarMoeda(movCriada.valor)} será removido da conta ${movCriada.banco}.`
+            );
+
+            if (!confirmar) return;
+
+            movimentacoes = movimentacoes.filter(mov => mov.id !== movCriada.id);
+            await salvarMovimentacoes();
+        }
+
+        delete lembrete.pagamentos[chave];
+        await salvarLembretes();
+        return;
+    }
+
+    // ---- Pagar / receber: cria o lançamento ----
+    const receber = ehLembreteReceber(lembrete);
+
+    let valor = Number(lembrete.valor) || 0;
+    let banco = lembrete.banco || "";
+    let categoria = lembrete.categoria || "";
+
+    // Empréstimo: o dinheiro volta pra conta de onde saiu e na categoria
+    // do empréstimo original.
+    if (receber) {
+
+        const movOrigem = movimentacoes.find(
+            mov => String(mov.id) === String(lembrete.movimentacaoId)
+        );
+
+        banco = banco || (movOrigem ? movOrigem.banco : "");
+        categoria = (movOrigem && movOrigem.categoria) || "Empréstimo";
+    }
+
+    if (banco && !carregarBancos().some(b => b.nome === banco)) {
+        banco = "";
+    }
+
+    if (!(valor > 0) || !banco || (!receber && !categoria)) {
+
+        const resposta = await pedirDadosPagamento({
+            titulo: lembrete.titulo, receber, valor, banco, categoria
+        });
+
+        if (!resposta) return;
+
+        valor = resposta.valor;
+        banco = resposta.banco;
+
+        if (!receber) categoria = resposta.categoria;
+    }
+
+    const novaMov = {
+        id: Date.now(),
+        tipo: receber ? "Entrada" : "Saída",
+        natureza: receber ? "Entrada" : naturezaDaCategoria(categoria),
+        banco,
+        categoria,
+        valor,
+        data: dataISO,
+        descricao: lembrete.titulo,
+        lembreteId: lembrete.id,
+        lembreteChave: chave
+    };
+
+    movimentacoes.push(novaMov);
+    await salvarMovimentacoes();
+
+    lembrete.pagamentos[chave] = novaMov.id;
+    await salvarLembretes();
+}
+
 // ---------------- GRADE DO CALENDÁRIO ----------------
 
 function renderizarCalendario() {
@@ -446,7 +677,21 @@ function renderizarDia() {
             const qtdLembretes = lembretes.length;
             lembretes = lembretes.filter(l => String(l.movimentacaoId) !== String(id));
 
-            if (lembretes.length !== qtdLembretes) {
+            // se o lançamento foi criado ao marcar um lembrete como pago,
+            // o lembrete volta a ficar pendente
+            let lembretesMudaram = lembretes.length !== qtdLembretes;
+
+            if (movExcluida && movExcluida.lembreteId != null) {
+
+                const origem = lembretes.find(l => l.id === movExcluida.lembreteId);
+
+                if (origem && origem.pagamentos && origem.pagamentos[movExcluida.lembreteChave]) {
+                    delete origem.pagamentos[movExcluida.lembreteChave];
+                    lembretesMudaram = true;
+                }
+            }
+
+            if (lembretesMudaram) {
                 await salvarLembretes();
             }
 
@@ -463,6 +708,15 @@ let lembreteEditandoId = null;
 
 function abrirPainelLembrete() {
     painelLembrete.classList.remove("oculto");
+
+    if (lembreteEditandoId === null) {
+        popularSelectBanco(lembreteBanco, "");
+        popularSelectCategoria(lembreteCategoria, "");
+        campoLembreteBanco.style.display = "";
+        campoLembreteCategoria.style.display = "";
+        dicaLembrete.style.display = "";
+    }
+
     btnAdicionarLembrete.classList.add("ativo");
     lembreteTitulo.focus();
 }
@@ -475,6 +729,8 @@ function fecharPainelLembrete() {
     lembreteValor.value = "";
     lembreteObservacao.value = "";
     lembreteRecorrente.checked = true;
+    lembreteBanco.value = "";
+    lembreteCategoria.value = "";
     btnSalvarLembrete.textContent = "💾 Salvar lembrete";
 }
 
@@ -490,6 +746,19 @@ function abrirEdicaoLembrete(lembrete) {
     btnSalvarLembrete.textContent = "💾 Salvar alterações";
 
     abrirPainelLembrete();
+
+    // Empréstimo (receber) usa a conta do empréstimo original, então não
+    // pede conta/categoria. Conta minha (pagar) mostra os dois campos.
+    const receber = ehLembreteReceber(lembrete);
+
+    campoLembreteBanco.style.display = receber ? "none" : "";
+    campoLembreteCategoria.style.display = receber ? "none" : "";
+    dicaLembrete.style.display = receber ? "none" : "";
+
+    if (!receber) {
+        popularSelectBanco(lembreteBanco, lembrete.banco);
+        popularSelectCategoria(lembreteCategoria, lembrete.categoria);
+    }
 }
 
 function renderizarLembretesDia() {
@@ -535,11 +804,10 @@ function renderizarLembretesDia() {
             const lembrete = lembretes.find(l => l.id === Number(btn.dataset.id));
             if (!lembrete) return;
 
-            lembrete.pagamentos = lembrete.pagamentos || {};
-            const chave = chaveOcorrencia(lembrete, diaSelecionadoISO);
-            lembrete.pagamentos[chave] = !lembrete.pagamentos[chave];
+            btn.disabled = true;
 
-            await salvarLembretes();
+            await marcarComoPago(lembrete, diaSelecionadoISO);
+
             atualizarTudo();
         });
     });
@@ -607,6 +875,11 @@ btnSalvarLembrete.addEventListener("click", async () => {
             lembrete.observacao = observacao;
             lembrete.recorrente = recorrente;
 
+            if (!ehLembreteReceber(lembrete)) {
+                lembrete.banco = lembreteBanco.value;
+                lembrete.categoria = lembreteCategoria.value;
+            }
+
             if (recorrente) {
                 lembrete.diaDoMes = lembrete.diaDoMes || diaDaSelecao;
                 delete lembrete.data;
@@ -624,6 +897,8 @@ btnSalvarLembrete.addEventListener("click", async () => {
             valor,
             observacao,
             recorrente,
+            banco: lembreteBanco.value,
+            categoria: lembreteCategoria.value,
             pagamentos: {}
         };
 

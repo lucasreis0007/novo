@@ -501,7 +501,20 @@ btnExcluirMov.addEventListener("click", async () => {
         l => String(l.movimentacaoId) !== String(idEdicao)
     );
 
-    if (lembretesRestantes.length !== lembretesAtuais.length) {
+    let lembretesMudaram = lembretesRestantes.length !== lembretesAtuais.length;
+
+    // lançamento criado ao marcar um lembrete como pago: o lembrete volta a ficar pendente
+    if (movimentacaoEditando.lembreteId != null) {
+
+        const origem = lembretesRestantes.find(l => l.id === movimentacaoEditando.lembreteId);
+
+        if (origem && origem.pagamentos && origem.pagamentos[movimentacaoEditando.lembreteChave]) {
+            delete origem.pagamentos[movimentacaoEditando.lembreteChave];
+            lembretesMudaram = true;
+        }
+    }
+
+    if (lembretesMudaram) {
         await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
     }
 

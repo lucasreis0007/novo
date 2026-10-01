@@ -388,7 +388,20 @@ function carregarMovimentacoes(){
             const lembretesAtuais = JSON.parse(localStorage.getItem("lembretes")) || [];
             const lembretesRestantes = lembretesAtuais.filter(l => String(l.movimentacaoId) !== String(id));
 
-            if (lembretesRestantes.length !== lembretesAtuais.length) {
+            let lembretesMudaram = lembretesRestantes.length !== lembretesAtuais.length;
+
+            // lançamento criado ao marcar um lembrete como pago: o lembrete volta a ficar pendente
+            if (movExcluida && movExcluida.lembreteId != null) {
+
+                const origem = lembretesRestantes.find(l => l.id === movExcluida.lembreteId);
+
+                if (origem && origem.pagamentos && origem.pagamentos[movExcluida.lembreteChave]) {
+                    delete origem.pagamentos[movExcluida.lembreteChave];
+                    lembretesMudaram = true;
+                }
+            }
+
+            if (lembretesMudaram) {
                 await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
             }
 
