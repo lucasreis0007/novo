@@ -339,3 +339,44 @@ input:focus{
     }
 
 }
+
+
+/* Seletor de ícone (mesmo visual da tela de Categorias) */
+
+.seletor-icones{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(52px, 1fr));
+    gap:10px;
+}
+
+.opcao-icone{
+    border:2px solid transparent;
+    background:#f4f6fb;
+    border-radius:14px;
+    padding:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.opcao-icone:hover{
+    background:#e5e7eb;
+}
+
+.opcao-icone.selecionado{
+    border-color:#4F46E5;
+    background:#EEF2FF;
+}
+
+.dica-icone{
+    margin-top:8px;
+    font-size:12px;
+    color:#64748B;
+}
+
+.meta-titulo-icone{
+    display:inline-flex;
+    align-items:center;
+}
