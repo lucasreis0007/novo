@@ -254,3 +254,255 @@ body{
         grid-template-columns:1fr;
     }
 }
+
+.gasto-periodo-datas{
+    font-size:12px;
+    opacity:.85;
+    margin-top:4px;
+}
+
+/* ---------------- META DE GASTO DO MÊS ---------------- */
+
+.meta-gasto-card{
+    background:#f4f6fb;
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:16px;
+}
+
+.meta-gasto-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    font-weight:bold;
+    color:#333;
+    margin-bottom:10px;
+}
+
+.btn-meta-gasto{
+    border:none;
+    background:white;
+    color:#4F46E5;
+    font-size:12px;
+    font-weight:bold;
+    padding:6px 12px;
+    border-radius:50px;
+    cursor:pointer;
+}
+
+.meta-gasto-vazio{
+    font-size:13px;
+    color:#777;
+}
+
+.meta-gasto-valores{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+}
+
+.meta-gasto-valores strong{
+    font-size:20px;
+    color:#333;
+}
+
+.meta-gasto-valores span{
+    font-size:13px;
+    color:#666;
+}
+
+.progresso.meta-ok{ background:#16a34a; }
+.progresso.meta-perto{ background:#d97706; }
+.progresso.meta-estourou{ background:#dc2626; }
+
+.meta-gasto-situacao{
+    font-size:13px;
+    margin-top:8px;
+    color:#555;
+}
+
+.meta-gasto-situacao.estourou{ color:#dc2626; font-weight:bold; }
+.meta-gasto-situacao.perto{ color:#b45309; }
+
+.meta-gasto-edicao{
+    margin-top:12px;
+}
+
+.meta-gasto-edicao input{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:15px;
+    margin-bottom:10px;
+}
+
+.meta-gasto-acoes{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.meta-gasto-acoes button{
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    font-size:13px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.btn-meta-salvar{ background:#4F46E5; color:white; }
+.btn-meta-remover{ background:#fee2e2; color:#dc2626; }
+.btn-meta-cancelar{ background:#e5e7eb; color:#555; }
+
+/* ---------------- CONTAS A PAGAR NO PERÍODO ---------------- */
+
+.contas-pagar-card{
+    background:#fffaf3;
+    border:1px solid #fde3c0;
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:16px;
+}
+
+.contas-pagar-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    font-weight:bold;
+    color:#333;
+    margin-bottom:10px;
+}
+
+.contas-pagar-topo strong{
+    color:#d97706;
+    font-size:16px;
+}
+
+.conta-pagar-linha{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+    border-top:1px solid #fde3c0;
+    font-size:13px;
+}
+
+.conta-pagar-linha:first-child{
+    border-top:none;
+}
+
+.conta-pagar-linha small{
+    display:block;
+    color:#888;
+    margin-top:2px;
+}
+
+.conta-pagar-linha.atrasada small{
+    color:#dc2626;
+    font-weight:bold;
+}
+
+.conta-pagar-linha > span{
+    font-weight:bold;
+    color:#333;
+    white-space:nowrap;
+}
+
+.contas-pagar-previsao{
+    font-size:12px;
+    color:#8a6d3b;
+    margin-top:10px;
+}
+
+/* ---------------- CATEGORIAS: DETALHES E COMPARAÇÃO ---------------- */
+
+.linha-categoria-botao{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    font:inherit;
+    color:inherit;
+}
+
+.linha-categoria-topo small{
+    color:#888;
+}
+
+.seta-categoria{
+    display:inline-block;
+    width:12px;
+    color:#888;
+}
+
+.cat-comparacao{
+    display:block;
+    font-size:11px;
+    margin-top:5px;
+    color:#777;
+}
+
+.cat-comparacao.subiu{ color:#dc2626; }
+.cat-comparacao.desceu{ color:#16a34a; }
+
+.lancamentos-categoria{
+    background:#f4f6fb;
+    border-radius:12px;
+    padding:4px 12px;
+    margin-top:8px;
+}
+
+.lancamento-categoria{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+    border-top:1px solid #e5e7eb;
+    font-size:13px;
+}
+
+.lancamento-categoria:first-child{
+    border-top:none;
+}
+
+.lancamento-categoria small{
+    display:block;
+    color:#888;
+    margin-top:2px;
+}
+
+.lancamento-categoria > span{
+    font-weight:bold;
+    white-space:nowrap;
+}
+
+.categorias-zeradas{
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px dashed #ddd;
+}
+
+.categorias-zeradas h4{
+    font-size:13px;
+    color:#666;
+    margin-bottom:8px;
+}
+
+.categoria-zerada{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:#16a34a;
+    padding:4px 0;
+}
