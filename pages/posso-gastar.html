@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Posso gastar?</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/posso-gastar.css">
+
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <button class="voltar" onclick="window.location.href='dashboard.html'">←</button>
+
+    <div class="header-texto">
+
+        <h1>💰 Posso gastar?</h1>
+
+        <p>Veja se o gasto cabe no seu planejamento</p>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <p id="avisoPlano" class="aviso-plano oculto"></p>
+
+    <!-- Pergunta -->
+    <section class="card-form">
+
+        <form id="formPergunta">
+
+            <div class="campo">
+                <label for="valorGasto">Quanto você pretende gastar?</label>
+                <input type="text" id="valorGasto" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off">
+            </div>
+
+            <div class="campo">
+                <label for="categoriaGasto">Em quê?</label>
+                <select id="categoriaGasto"></select>
+            </div>
+
+            <button type="submit" class="btnAnalisar">ANALISAR</button>
+
+        </form>
+
+        <div class="ou-pergunte">
+
+            <label for="textoPergunta">Ou pergunte do seu jeito</label>
+
+            <div class="linha-pergunta">
+                <input type="text" id="textoPergunta" placeholder="Ex.: Posso sair hoje e gastar 70?" autocomplete="off">
+                <button type="button" id="btnPerguntar" class="btnSecundario">Perguntar</button>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- Resultado -->
+    <section id="resultado" class="oculto"></section>
+
+    <!-- Limite seguro (sempre visível) -->
+    <section id="blocoLimite" class="bloco-limite"></section>
+
+    <!-- Planejamento -->
+    <details class="bloco-plano" id="detalhesPlano">
+
+        <summary>⚙️ Ajustar meu planejamento</summary>
+
+        <div class="plano-conteudo">
+
+            <p class="descricao">
+                É com estes valores que eu calculo o que é dinheiro livre. Pode alterar quando quiser.
+            </p>
+
+            <div class="campo-linha">
+                <div class="campo">
+                    <label for="planoRenda">Renda mensal (R$)</label>
+                    <input type="text" id="planoRenda" inputmode="decimal">
+                </div>
+                <div class="campo">
+                    <label for="planoLazer">Orçamento de lazer (R$/mês)</label>
+                    <input type="text" id="planoLazer" inputmode="decimal">
+                </div>
+            </div>
+
+            <h3>Gastos que contam como lazer</h3>
+            <p class="descricao">Gastos nessas categorias são descontados do orçamento de lazer.</p>
+            <div id="planoCategoriasLazer" class="lista-checks"></div>
+
+            <h3>Aportes das metas (por mês)</h3>
+            <p class="descricao">Dinheiro reservado: nunca entra na conta de "livre pra gastar". Deixe vazio se a meta não tem aporte mensal.</p>
+            <div id="planoAportes" class="lista-linhas"></div>
+
+            <h3>Gastos e obrigações fixas</h3>
+            <p class="descricao">A categoria serve para eu perceber quando a conta já foi paga neste mês.</p>
+            <div id="planoObrigacoes" class="lista-linhas"></div>
+            <button type="button" id="btnAddObrigacao" class="btnSecundario">+ Adicionar obrigação</button>
+
+            <h3>Recebimentos previstos</h3>
+            <p class="descricao">Informe o dia do mês em que cada um cai. Quando uma entrada dessa categoria for lançada, eu marco como recebido.</p>
+            <div id="planoRecebimentos" class="lista-linhas"></div>
+            <button type="button" id="btnAddRecebimento" class="btnSecundario">+ Adicionar recebimento</button>
+
+            <p id="erroPlano" class="erro oculto"></p>
+
+            <button type="button" id="btnSalvarPlano" class="btnAnalisar">Salvar planejamento</button>
+
+        </div>
+
+    </details>
+
+</main>
+
+<script type="module" src="../js/posso-gastar.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+
+</html>
