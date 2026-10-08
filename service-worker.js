@@ -1,4 +1,4 @@
-const CACHE_NOME = "financas-cache-v31";
+const CACHE_NOME = "financas-cache-v32";
 
 const ARQUIVOS_PARA_CACHE = [
     "./",
@@ -55,6 +55,11 @@ const ARQUIVOS_PARA_CACHE = [
     "./pages/configuracoes.html",
     "./css/configuracoes.css",
     "./js/configuracoes.js",
+
+    "./pages/posso-gastar.html",
+    "./css/posso-gastar.css",
+    "./js/posso-gastar.js",
+    "./js/posso-gastar-core.js",
 
     "./pages/transferencia.html",
     "./css/transferencia.css",
