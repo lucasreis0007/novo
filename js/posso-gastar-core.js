@@ -135,41 +135,18 @@ function achaCategoriaPorNome(nomes, alvo) {
     return nomes.find(nome => normalizar(nome) === n) || "";
 }
 
-// Valores sugeridos na primeira vez (os mesmos que você passou no pedido).
-// Nada é salvo até você tocar em "Salvar planejamento".
-export function planejamentoPadrao(metas, categorias) {
-
-    const nomes = categoriasDeSaida(categorias);
-
-    const categoriasLazer = nomes.filter(nome => {
-        const n = normalizar(nome);
-        return PALAVRAS_LAZER.some(p => n.includes(p));
-    });
-
-    const metaCnh = (metas || []).find(m => normalizar(m.nome).includes("cnh"));
-    const metaReserva = (metas || []).find(m => normalizar(m.nome) === "reserva")
-        || (metas || []).find(m => normalizar(m.nome).includes("reserva"));
-
-    const aportes = [];
-
-    if (metaCnh) aportes.push({ metaId: metaCnh.id, nome: metaCnh.nome, valor: 100, dia: null });
-    if (metaReserva) aportes.push({ metaId: metaReserva.id, nome: metaReserva.nome, valor: 50, dia: null });
-
+// Planejamento inicial: tudo vazio. Quem configura é você, na tela
+// "Ajustar meu planejamento". Enquanto não for salvo, o app avisa que
+// falta configurar em vez de inventar valores.
+export function planejamentoPadrao() {
     return {
         confirmado: false,
-        rendaMensal: 709,
-        limiteLazer: 129,
-        categoriasLazer,
-        aportes,
-        obrigacoes: [
-            { id: 1, nome: "Consórcio", valor: 245, categoria: achaCategoriaPorNome(nomes, "Consórcio"), dia: null },
-            { id: 2, nome: "Boxe", valor: 100, categoria: achaCategoriaPorNome(nomes, "Boxe"), dia: null },
-            { id: 3, nome: "Cabelo + telefone", valor: 85, categoria: "", dia: null }
-        ],
-        recebimentos: [
-            { id: 1, nome: "Recebimento 1", valor: 324, categoria: "", dia: null },
-            { id: 2, nome: "Recebimento 2", valor: 385, categoria: "", dia: null }
-        ]
+        rendaMensal: null,
+        limiteLazer: null,
+        categoriasLazer: [],
+        aportes: [],
+        obrigacoes: [],
+        recebimentos: []
     };
 }
 
@@ -431,6 +408,8 @@ export function analisarGasto(situacao, valorPedido, categoria = GRUPO_LAZER) {
     const valor = arredondar(valorPedido);
     const faltando = [];
 
+    const naoConfigurado = situacao._plano.confirmado !== true;
+
     const ehLazer = categoria === GRUPO_LAZER || (situacao._plano.categoriasLazer || []).includes(categoria);
 
     let orcamento = null;
@@ -438,7 +417,7 @@ export function analisarGasto(situacao, valorPedido, categoria = GRUPO_LAZER) {
 
     if (ehLazer) {
 
-        rotuloCategoria = "Lazer";
+        rotuloCategoria = categoria === GRUPO_LAZER ? "Lazer" : categoria;
 
         if (situacao.lazer.limite === null) {
             faltando.push("Orçamento mensal de lazer");
@@ -452,7 +431,7 @@ export function analisarGasto(situacao, valorPedido, categoria = GRUPO_LAZER) {
         orcamento = orcamentoAtivoDaCategoria(situacao._orcamentos, situacao._movs, categoria, situacao.hojeISO);
 
     } else {
-        rotuloCategoria = "Sem categoria definida";
+        faltando.push("Categoria do gasto");
     }
 
     const incompletas = (situacao._plano.obrigacoes || []).some(o => !(Number(o.valor) > 0));
@@ -461,6 +440,12 @@ export function analisarGasto(situacao, valorPedido, categoria = GRUPO_LAZER) {
     if (!(valor > 0)) faltando.push("Valor que você pretende gastar");
 
     // ---------------- sem dados suficientes ----------------
+    if (naoConfigurado) {
+        faltando.length = 0;
+        faltando.push("Configurar seu planejamento (orçamento de lazer, obrigações, aportes das metas e recebimentos) em \"Ajustar meu planejamento\"");
+        if (!(valor > 0)) faltando.push("Valor que você pretende gastar");
+    }
+
     if (faltando.length > 0) {
         return {
             nivel: NIVEL.FALTAM_DADOS,
@@ -517,6 +502,7 @@ export function analisarGasto(situacao, valorPedido, categoria = GRUPO_LAZER) {
         motivo,
         valor,
         categoria: rotuloCategoria,
+        ehLazer,
         temOrcamentoCategoria: orcamento !== null,
         orcamento,
         categoriaAntes,
@@ -586,7 +572,7 @@ export function interpretarPergunta(texto, nomesCategorias = []) {
     const valor = lerValor(t);
 
     // categoria sugerida pelas palavras da frase
-    let categoria = GRUPO_LAZER;
+    let categoria = null;
 
     for (const regra of PALAVRAS_CATEGORIA) {
 

@@ -76,15 +76,21 @@ function rotuloDia(dia) {
 function montarSeletorCategoria() {
 
     const select = el("categoriaGasto");
+    const anterior = select.value;
 
-    const lazer = plano.categoriasLazer || [];
+    if (nomesSaida.length === 0) {
+        select.innerHTML = `<option value="">Cadastre categorias na aba Categorias</option>`;
+        return;
+    }
 
-    const outras = nomesSaida.filter(n => !lazer.includes(n));
+    // só aparecem as categorias que você já cadastrou no app
+    select.innerHTML = nomesSaida.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
 
-    select.innerHTML =
-        `<option value="${GRUPO_LAZER}">🎉 Lazer / namoro / entretenimento</option>` +
-        outras.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("") +
-        `<option value="">Outra (sem orçamento definido)</option>`;
+    if (nomesSaida.includes(anterior)) select.value = anterior;
+}
+
+function categoriaSelecionada() {
+    return el("categoriaGasto").value;
 }
 
 // ---------------- CÁLCULO ----------------
@@ -209,7 +215,7 @@ function renderizarResultado(r, situacao) {
         ? `${restariam}${textoCobertura(r)}`
         : frasePorMotivo(r, situacao);
 
-    const lazerLinha = r.temOrcamentoCategoria && r.categoria === "Lazer"
+    const lazerLinha = r.temOrcamentoCategoria && r.ehLazer
         ? `<p class="recomendacao">Você tem ${moeda(r.orcamento.limite)} destinados ao lazer neste mês e ainda possui ${moeda(Math.max(0, r.categoriaAntes))} disponíveis nessa categoria.</p>`
         : "";
 
@@ -237,7 +243,7 @@ function renderizarResultado(r, situacao) {
 
 // ---------------- BLOCO "LIMITE SEGURO" ----------------
 
-function renderizarLimite(categoria = GRUPO_LAZER, periodo = "hoje") {
+function renderizarLimite(categoria = categoriaSelecionada()) {
 
     const situacao = situacaoAtual();
     const l = limiteSeguro(situacao, categoria);
@@ -314,7 +320,7 @@ el("formPergunta").addEventListener("submit", evento => {
 
     const valor = numeroDoCampo(el("valorGasto").value);
 
-    analisar(valor || 0, el("categoriaGasto").value);
+    analisar(valor || 0, categoriaSelecionada());
 });
 
 function perguntar() {
@@ -325,9 +331,16 @@ function perguntar() {
 
     const pergunta = interpretarPergunta(texto, nomesSaida);
 
-    // se a categoria sugerida não existe no seletor, volta pro grupo de lazer
-    const opcoes = [...el("categoriaGasto").options].map(o => o.value);
-    const categoria = opcoes.includes(pergunta.categoria) ? pergunta.categoria : GRUPO_LAZER;
+    // categoria sugerida pelas palavras da frase: só vale se for uma das
+    // categorias cadastradas; senão, mantém a que já está escolhida na tela
+    let categoria = categoriaSelecionada();
+
+    if (pergunta.categoria === GRUPO_LAZER) {
+        const lazer = (plano.categoriasLazer || []).find(n => nomesSaida.includes(n));
+        if (lazer) categoria = lazer;
+    } else if (pergunta.categoria && nomesSaida.includes(pergunta.categoria)) {
+        categoria = pergunta.categoria;
+    }
 
     el("categoriaGasto").value = categoria;
 
@@ -364,7 +377,7 @@ el("textoPergunta").addEventListener("keydown", evento => {
 });
 
 el("categoriaGasto").addEventListener("change", () => {
-    renderizarLimite(el("categoriaGasto").value);
+    renderizarLimite();
 });
 
 // ======================================================================
@@ -586,7 +599,7 @@ el("btnSalvarPlano").addEventListener("click", async () => {
     montarSeletorCategoria();
     atualizarAvisoPlano();
     renderizarEditor();
-    renderizarLimite(el("categoriaGasto").value);
+    renderizarLimite();
 
     el("resultado").classList.add("oculto");
     el("detalhesPlano").open = false;
@@ -606,8 +619,7 @@ function atualizarAvisoPlano() {
     }
 
     aviso.textContent =
-        "Estou usando os valores que você me passou (renda, lazer, obrigações e metas). " +
-        "Abra \"Ajustar meu planejamento\", informe o dia de cada recebimento e conta, e toque em Salvar.";
+        "Seu planejamento ainda não foi configurado. Abra \"Ajustar meu planejamento\", preencha o que quiser (lazer, obrigações, metas, recebimentos) e toque em Salvar.";
 
     aviso.classList.remove("oculto");
 }
@@ -617,4 +629,4 @@ function atualizarAvisoPlano() {
 montarSeletorCategoria();
 renderizarEditor();
 atualizarAvisoPlano();
-renderizarLimite(GRUPO_LAZER);
+renderizarLimite();
