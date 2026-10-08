@@ -155,7 +155,8 @@ document.getElementById("btnExportarBackup").addEventListener("click", () => {
             bancos: JSON.parse(armazenamento.getItem("bancos")) || [],
             metas: JSON.parse(armazenamento.getItem("metas")) || [],
             orcamentos: JSON.parse(armazenamento.getItem("orcamentos")) || [],
-            categorias: JSON.parse(armazenamento.getItem("categorias")) || {}
+            categorias: JSON.parse(armazenamento.getItem("categorias")) || {},
+            planejamento: JSON.parse(armazenamento.getItem("planejamento")) || null
         };
 
         baixarArquivo(
@@ -223,6 +224,9 @@ inputBackup.addEventListener("change", async () => {
         }
         if (backup.categorias && typeof backup.categorias === "object") {
             await armazenamento.setItem("categorias", JSON.stringify(backup.categorias));
+        }
+        if (backup.planejamento && typeof backup.planejamento === "object") {
+            await armazenamento.setItem("planejamento", JSON.stringify(backup.planejamento));
         }
 
         sucessoBackup.textContent = "Backup restaurado com sucesso! Redirecionando...";
