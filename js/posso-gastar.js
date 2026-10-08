@@ -140,7 +140,7 @@ function textoCobertura(r) {
     return `${lista.charAt(0).toUpperCase()}${lista.slice(1)} continuam cobertos.`;
 }
 
-function renderizarResultado(r, situacao) {
+function renderizarResultado(r, situacao, extras = {}) {
 
     const caixa = el("resultado");
     caixa.classList.remove("oculto");
@@ -177,14 +177,35 @@ function renderizarResultado(r, situacao) {
 
     const linhas = [];
 
+    // Se já não sobra nada antes do gasto, "antes" e "depois" ficam os dois
+    // em R$ 0,00 e o buraco real aparece numa linha separada (deficit).
+    // Se sobra algo e o gasto passa disso, "depois" mostra o negativo.
+    const semFolga = r.restanteAntes <= 0;
+    const deficit = r.livreAntes < 0 ? arredondar(-r.livreAntes) : 0;
+
+    const antesTxt = moeda(Math.max(0, r.restanteAntes));
+    const depoisTxt = semFolga
+        ? moeda(0)
+        : (r.restanteDepois < 0 ? `− ${moeda(Math.abs(r.restanteDepois))}` : moeda(r.restanteDepois));
+
     linhas.push(["Valor solicitado", moeda(r.valor)]);
-    linhas.push(["Disponível antes", moeda(Math.max(0, r.restanteAntes))]);
-    linhas.push(["Disponível depois", r.restanteDepois < 0 ? `− ${moeda(Math.abs(r.restanteDepois))}` : moeda(r.restanteDepois)]);
+    linhas.push(["Disponível antes", antesTxt]);
+    linhas.push(["Disponível depois", depoisTxt]);
+
+    if (deficit > 0) {
+        linhas.push(["Faltam para cobrir contas e aportes", moeda(deficit)]);
+    }
 
     if (r.temOrcamentoCategoria) {
+        // No grupo de lazer, os números são do ORÇAMENTO DE LAZER inteiro
+        // (a categoria escolhida é só uma das que entram nele).
+        const rotulo = r.ehLazer
+            ? (normalizar(r.categoria) === "lazer" ? "Lazer" : `Lazer (${esc(r.categoria)})`)
+            : esc(r.categoria);
+
         linhas.push([
             `Categoria afetada`,
-            `${esc(r.categoria)}: ${moeda(Math.max(0, r.categoriaAntes))} de ${moeda(r.orcamento.limite)} restantes`
+            `${rotulo}: ${moeda(Math.max(0, r.categoriaAntes))} de ${moeda(r.orcamento.limite)} restantes`
         ]);
     } else {
         linhas.push(["Categoria afetada", `${esc(r.categoria)} (sem orçamento próprio)`]);
@@ -234,7 +255,7 @@ function renderizarResultado(r, situacao) {
 
             ${limiteHtml}
 
-            ${situacao.avisos.length ? `<div class="avisos">${situacao.avisos.map(a => `<span>ℹ️ ${esc(a)}</span>`).join("")}</div>` : ""}
+            ${(extras.avisos?.length || situacao.avisos.length) ? `<div class="avisos">${[...(extras.avisos || []), ...situacao.avisos].map(a => `<span>ℹ️ ${esc(a)}</span>`).join("")}</div>` : ""}
         </div>
     `;
 
@@ -306,12 +327,37 @@ function mostrarLimiteComoResposta(pergunta) {
 
 // ---------------- AÇÕES ----------------
 
-function analisar(valor, categoria) {
+function analisar(valor, categoria, extras = {}) {
 
     const situacao = situacaoAtual();
     const resultado = analisarGasto(situacao, valor, categoria);
 
-    renderizarResultado(resultado, situacao);
+    renderizarResultado(resultado, situacao, extras);
+}
+
+// Procura, na frase digitada, o nome de uma categoria cadastrada
+// (nome inteiro primeiro; depois qualquer palavra do nome com 4+ letras).
+function escaparRegex(texto) {
+    return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function acharCategoriaNoTexto(texto) {
+
+    const t = normalizar(texto);
+    const porTamanho = [...nomesSaida].sort((a, b) => b.length - a.length);
+
+    const inteiro = porTamanho.find(nome => {
+        const n = normalizar(nome);
+        return n && new RegExp(`\\b${escaparRegex(n)}\\b`).test(t);
+    });
+
+    if (inteiro) return inteiro;
+
+    return porTamanho.find(nome =>
+        normalizar(nome).split(/\s+/).some(palavra =>
+            palavra.length >= 4 && new RegExp(`\\b${escaparRegex(palavra)}\\b`).test(t)
+        )
+    ) || null;
 }
 
 el("formPergunta").addEventListener("submit", evento => {
@@ -334,12 +380,20 @@ function perguntar() {
     // categoria sugerida pelas palavras da frase: só vale se for uma das
     // categorias cadastradas; senão, mantém a que já está escolhida na tela
     let categoria = categoriaSelecionada();
+    let categoriaAssumida = false;
 
-    if (pergunta.categoria === GRUPO_LAZER) {
+    const doTexto = acharCategoriaNoTexto(texto);
+
+    if (doTexto) {
+        categoria = doTexto;
+    } else if (pergunta.categoria === GRUPO_LAZER) {
         const lazer = (plano.categoriasLazer || []).find(n => nomesSaida.includes(n));
         if (lazer) categoria = lazer;
     } else if (pergunta.categoria && nomesSaida.includes(pergunta.categoria)) {
         categoria = pergunta.categoria;
+    } else {
+        // nada na frase indica a categoria: usa a da tela, mas avisa
+        categoriaAssumida = true;
     }
 
     el("categoriaGasto").value = categoria;
@@ -364,7 +418,11 @@ function perguntar() {
 
     el("valorGasto").value = String(pergunta.valor).replace(".", ",");
 
-    analisar(pergunta.valor, categoria);
+    analisar(pergunta.valor, categoria, {
+        avisos: categoriaAssumida && categoria
+            ? [`Não identifiquei a categoria na sua pergunta, então usei "${categoria}" (a que está selecionada na tela). Se for outra, escolha no seletor e toque em Analisar.`]
+            : []
+    });
 }
 
 el("btnPerguntar").addEventListener("click", perguntar);
