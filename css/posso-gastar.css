@@ -1,0 +1,402 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f4f6fb;
+    color:#222;
+    padding-bottom:40px;
+}
+
+.oculto{
+    display:none !important;
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    background:linear-gradient(135deg,#4F46E5,#6366F1);
+    color:white;
+    padding:25px;
+    border-radius:0 0 25px 25px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+}
+
+.voltar{
+    width:42px;
+    height:42px;
+    flex-shrink:0;
+    border:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.15);
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.header h1{
+    font-size:26px;
+}
+
+.header p{
+    margin-top:5px;
+    opacity:.9;
+}
+
+.container{
+    width:95%;
+    max-width:700px;
+    margin:25px auto;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+/* ---------- Formulário ---------- */
+
+.card-form,
+.bloco-plano,
+.bloco-limite{
+    background:white;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+}
+
+.card-form form{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+.campo{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    flex:1;
+    min-width:0;
+}
+
+.campo label,
+.ou-pergunte label{
+    font-weight:600;
+    color:#444;
+    font-size:14px;
+}
+
+select,
+input[type="text"]{
+    width:100%;
+    height:50px;
+    border:2px solid #ddd;
+    border-radius:14px;
+    padding:0 15px;
+    font-size:16px;
+    background:white;
+}
+
+select:focus,
+input[type="text"]:focus{
+    outline:none;
+    border-color:#4F46E5;
+}
+
+#valorGasto{
+    font-size:22px;
+    font-weight:bold;
+}
+
+.btnAnalisar{
+    height:56px;
+    border:none;
+    border-radius:16px;
+    background:#4F46E5;
+    color:white;
+    font-size:17px;
+    font-weight:bold;
+    letter-spacing:.5px;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.btnAnalisar:hover{
+    background:#4338CA;
+}
+
+.btnSecundario{
+    height:46px;
+    padding:0 16px;
+    border:none;
+    border-radius:14px;
+    background:#EEF0FD;
+    color:#4F46E5;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.ou-pergunte{
+    margin-top:20px;
+    padding-top:18px;
+    border-top:1px solid #eee;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.linha-pergunta{
+    display:flex;
+    gap:8px;
+}
+
+.linha-pergunta input{
+    height:46px;
+    font-size:15px;
+}
+
+/* ---------- Resultado ---------- */
+
+.resultado{
+    border-radius:18px;
+    padding:22px;
+    background:white;
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+    border-left:8px solid #ccc;
+}
+
+.resultado.pode{ border-left-color:#16A34A; background:#F0FDF4; }
+.resultado.cuidado{ border-left-color:#EAB308; background:#FEFCE8; }
+.resultado.nao{ border-left-color:#DC2626; background:#FEF2F2; }
+.resultado.faltam{ border-left-color:#64748B; background:#F8FAFC; }
+
+.resultado h2{
+    font-size:20px;
+    line-height:1.3;
+    margin-bottom:6px;
+}
+
+.resultado .selo{
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+    margin-bottom:10px;
+    display:block;
+    opacity:.75;
+}
+
+.resultado .recomendacao{
+    margin:10px 0 16px;
+    font-size:15px;
+    line-height:1.45;
+}
+
+.linhas-resultado{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    background:rgba(255,255,255,.7);
+    border-radius:12px;
+    padding:4px 14px;
+}
+
+.linha-res{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:10px 0;
+    border-bottom:1px solid rgba(0,0,0,.07);
+    font-size:14px;
+}
+
+.linha-res:last-child{
+    border-bottom:none;
+}
+
+.linha-res span:first-child{
+    color:#555;
+}
+
+.linha-res strong{
+    text-align:right;
+}
+
+.resultado h3{
+    font-size:14px;
+    margin:16px 0 8px;
+    color:#444;
+}
+
+.lista-prox{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:14px;
+}
+
+.lista-prox li{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.lista-prox .atrasada{
+    color:#B91C1C;
+    font-weight:700;
+}
+
+.avisos{
+    margin-top:14px;
+    font-size:13px;
+    color:#555;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.faltando-lista{
+    margin:8px 0 0 18px;
+    font-size:15px;
+    line-height:1.5;
+}
+
+/* ---------- Limite seguro ---------- */
+
+.bloco-limite{
+    text-align:center;
+}
+
+.bloco-limite .rotulo{
+    font-size:14px;
+    color:#555;
+}
+
+.bloco-limite .valor{
+    font-size:30px;
+    font-weight:bold;
+    color:#4F46E5;
+    margin:6px 0;
+}
+
+.bloco-limite .detalhe{
+    font-size:13px;
+    color:#666;
+    line-height:1.4;
+}
+
+/* ---------- Aviso do plano ---------- */
+
+.aviso-plano{
+    background:#FEF9C3;
+    border-radius:14px;
+    padding:14px 16px;
+    font-size:14px;
+    line-height:1.4;
+    color:#713F12;
+}
+
+/* ---------- Planejamento ---------- */
+
+.bloco-plano summary{
+    font-weight:700;
+    font-size:16px;
+    cursor:pointer;
+    list-style:none;
+}
+
+.bloco-plano summary::-webkit-details-marker{
+    display:none;
+}
+
+.plano-conteudo{
+    margin-top:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.plano-conteudo h3{
+    margin-top:12px;
+    font-size:16px;
+}
+
+.descricao{
+    font-size:13px;
+    color:#666;
+    line-height:1.4;
+}
+
+.campo-linha{
+    display:flex;
+    gap:10px;
+}
+
+.lista-checks{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.lista-checks label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:#f4f6fb;
+    padding:8px 12px;
+    border-radius:12px;
+    font-size:14px;
+}
+
+.lista-linhas{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.linha-plano{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    background:#f8f9fd;
+    padding:12px;
+    border-radius:14px;
+}
+
+.linha-plano .cheia{
+    grid-column:1 / -1;
+}
+
+.linha-plano input,
+.linha-plano select{
+    height:44px;
+    font-size:15px;
+}
+
+.linha-plano .nome-fixo{
+    grid-column:1 / -1;
+    font-weight:700;
+    font-size:14px;
+}
+
+.btnRemover{
+    grid-column:1 / -1;
+    height:36px;
+    border:none;
+    border-radius:10px;
+    background:#FEE2E2;
+    color:#B91C1C;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.erro{
+    color:#B91C1C;
+    font-size:14px;
+}

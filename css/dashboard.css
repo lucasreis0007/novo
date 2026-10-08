@@ -754,3 +754,53 @@ body{
     }
 
 }
+
+
+/* Botão de destaque: Posso gastar? */
+
+.btn-posso-gastar{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    border:none;
+    border-radius:20px;
+    padding:18px 20px;
+    margin-bottom:20px;
+    background:linear-gradient(135deg,#16A34A,#22C55E);
+    color:white;
+    text-align:left;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(22,163,74,.35);
+    transition:.2s;
+}
+
+.btn-posso-gastar:active{
+    transform:scale(.98);
+}
+
+.btn-posso-gastar .pg-icone{
+    font-size:32px;
+    flex-shrink:0;
+}
+
+.btn-posso-gastar .pg-texto{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    flex:1;
+}
+
+.btn-posso-gastar strong{
+    font-size:20px;
+}
+
+.btn-posso-gastar small{
+    font-size:13px;
+    opacity:.92;
+}
+
+.btn-posso-gastar .pg-seta{
+    font-size:24px;
+    font-weight:bold;
+}
