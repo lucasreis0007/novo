@@ -265,6 +265,13 @@ input:focus{
     background:#15803D;
 }
 
+.meta-previsao{
+    margin-top:10px;
+    font-size:13px;
+    line-height:1.4;
+    color:#64748B;
+}
+
 .meta-parabens{
     text-align:center;
     color:#16A34A;

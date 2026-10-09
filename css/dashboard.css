@@ -8,7 +8,7 @@
 body{
     background:#f4f6fb;
     color:#222;
-    padding-bottom:30px;
+    padding-bottom:100px;
 }
 
 .header{
@@ -756,51 +756,131 @@ body{
 }
 
 
-/* Botão de destaque: Posso gastar? */
+/* Gasto rápido: botão + e painel de baixo */
 
-.btn-posso-gastar{
-    width:100%;
+.fab-add{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    width:58px;
+    height:58px;
+    border:none;
+    border-radius:50%;
+    background:#4F46E5;
+    color:white;
+    font-size:34px;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(79,70,229,.45);
+    z-index:150;
+}
+
+.fab-add:active{
+    transform:scale(.95);
+}
+
+.rapido-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    z-index:155;
+}
+
+.rapido-overlay.aberto{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.rapido-sheet{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    background:white;
+    border-radius:24px 24px 0 0;
+    padding:20px 20px 28px;
+    max-height:90%;
+    overflow-y:auto;
+    transform:translateY(105%);
+    transition:transform .25s ease;
+    z-index:160;
+}
+
+.rapido-sheet.aberto{
+    transform:translateY(0);
+}
+
+.rapido-topo{
     display:flex;
     align-items:center;
-    gap:14px;
-    border:none;
-    border-radius:20px;
-    padding:18px 20px;
-    margin-bottom:20px;
-    background:linear-gradient(135deg,#16A34A,#22C55E);
-    color:white;
-    text-align:left;
-    cursor:pointer;
-    box-shadow:0 8px 20px rgba(22,163,74,.35);
-    transition:.2s;
+    justify-content:space-between;
+    margin-bottom:12px;
 }
 
-.btn-posso-gastar:active{
-    transform:scale(.98);
-}
-
-.btn-posso-gastar .pg-icone{
-    font-size:32px;
-    flex-shrink:0;
-}
-
-.btn-posso-gastar .pg-texto{
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-    flex:1;
-}
-
-.btn-posso-gastar strong{
+.rapido-topo h2{
     font-size:20px;
 }
 
-.btn-posso-gastar small{
-    font-size:13px;
-    opacity:.92;
+.rapido-fechar{
+    border:none;
+    background:#EEF2FF;
+    color:#4F46E5;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    font-size:16px;
+    cursor:pointer;
 }
 
-.btn-posso-gastar .pg-seta{
-    font-size:24px;
+#formRapido label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:12px;
+    font-size:14px;
+    color:#475569;
+}
+
+#formRapido input,
+#formRapido select{
+    padding:12px;
+    border:1px solid #CBD5E1;
+    border-radius:12px;
+    font-size:16px;
+    background:white;
+}
+
+#rapidoValor{
+    font-size:22px;
     font-weight:bold;
+}
+
+.rapido-erro{
+    color:#DC2626;
+    font-size:13px;
+    margin-bottom:10px;
+}
+
+.rapido-salvar{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    background:#4F46E5;
+    color:white;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.rapido-mais{
+    display:block;
+    margin-top:14px;
+    text-align:center;
+    font-size:13px;
+    color:#4F46E5;
+    text-decoration:none;
 }
