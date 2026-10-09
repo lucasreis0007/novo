@@ -113,11 +113,69 @@ function moeda(valor) {
     });
 }
 
+// ---------------- PREVISÃO DA META ----------------
+// "Guardando cerca de R$ X por mês, você chega lá em <mês>."
+// X = média dos aportes dos últimos 3 meses (ou dos meses que já existem,
+// se o primeiro aporte for mais recente que isso).
+
+function previsaoMeta(meta, movs) {
+
+    const faltando = Number(meta.valorObjetivo) - Number(meta.valorAtual);
+
+    if (!(faltando > 0)) return "";
+
+    const aportes = movs.filter(m =>
+        m.natureza === "Meta" && String(m.metaId) === String(meta.id) && m.data
+    );
+
+    if (aportes.length === 0) {
+        return "Faça um aporte para ver quando você chega lá.";
+    }
+
+    const hoje = new Date();
+
+    const [anoPrimeiro, mesPrimeiro] = aportes.map(m => m.data).sort()[0].split("-").map(Number);
+
+    const mesesDesdePrimeiro =
+        (hoje.getFullYear() - anoPrimeiro) * 12 + (hoje.getMonth() + 1 - mesPrimeiro) + 1;
+
+    const meses = Math.max(1, Math.min(3, mesesDesdePrimeiro));
+
+    const inicioJanela = new Date(hoje.getFullYear(), hoje.getMonth() - (meses - 1), 1);
+
+    const inicioISO = inicioJanela.toLocaleDateString("en-CA");
+
+    const somaJanela = aportes
+        .filter(m => m.data >= inicioISO)
+        .reduce((total, m) => total + Number(m.valor), 0);
+
+    const media = somaJanela / meses;
+
+    if (!(media > 0)) {
+        return "Faça um aporte para ver quando você chega lá.";
+    }
+
+    const mesesRestantes = Math.ceil(faltando / media);
+
+    const origemMedia = meses === 1 ? "deste mês" : `dos últimos ${meses} meses`;
+
+    if (mesesRestantes > 120) {
+        return `No ritmo atual (média ${origemMedia}: ${moeda(media)} por mês), ainda faltam mais de 10 anos. Aumentar o aporte ajuda.`;
+    }
+
+    const previsao = new Date(hoje.getFullYear(), hoje.getMonth() + mesesRestantes, 1)
+        .toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+
+    return `Guardando cerca de ${moeda(media)} por mês (média ${origemMedia}), você chega lá em ${previsao}.`;
+}
+
 // ---------------- RENDERIZAÇÃO ----------------
 
 function renderizarMetas() {
 
     const metas = carregarMetas();
+
+    const movsParaPrevisao = JSON.parse(localStorage.getItem("movimentacoes")) || [];
 
     const opcoesBancos = carregarBancos()
         .map(b => `<option value="${b.nome}">${b.emoji} ${b.nome}</option>`)
@@ -170,6 +228,8 @@ function renderizarMetas() {
             <div class="barra">
                 <div class="progresso ${completa ? "completa" : ""}" style="width:${percentual}%"></div>
             </div>
+
+            ${completa ? "" : `<p class="meta-previsao">${previsaoMeta(meta, movsParaPrevisao)}</p>`}
 
             ${completa
                 ? `<p class="meta-parabens">🎉 Meta concluída!</p>`

@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, iconeCategoriaTexto } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -1024,3 +1024,182 @@ renderizarAlertasDashboard(infoLembretesDashboard);
 
 atualizarStatusNotificacoesDash();
 notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLembretesDashboard.hoje]);
+
+
+// ======================================================================
+// GASTO RÁPIDO (botão +)
+// Saída em poucos toques: valor, categoria e conta. Lembra a última
+// categoria e conta usadas neste aparelho. Entradas, outra data e
+// empréstimos continuam na tela "Adicionar" (link "Mais opções").
+// ======================================================================
+
+(function iniciarGastoRapido() {
+
+    const btnRapido = document.getElementById("btnRapido");
+    const sheetRapido = document.getElementById("sheetRapido");
+    const overlayRapido = document.getElementById("overlayRapido");
+
+    if (!btnRapido || !sheetRapido) return;
+
+    const formRapido = document.getElementById("formRapido");
+    const campoValor = document.getElementById("rapidoValor");
+    const campoCategoria = document.getElementById("rapidoCategoria");
+    const campoBanco = document.getElementById("rapidoBanco");
+    const campoDescricao = document.getElementById("rapidoDescricao");
+    const caixaErro = document.getElementById("rapidoErro");
+    const botaoSalvar = document.getElementById("rapidoSalvar");
+
+    const CHAVE_ULTIMA_CATEGORIA = "gastoRapido.categoria";
+    const CHAVE_ULTIMO_BANCO = "gastoRapido.banco";
+
+    // preferência só deste aparelho (não vai pro Firestore)
+    function lerPreferencia(chave) {
+        try { return window.localStorage.getItem(chave) || ""; } catch { return ""; }
+    }
+
+    function guardarPreferencia(chave, valor) {
+        try { window.localStorage.setItem(chave, valor); } catch { /* sem armazenamento: tudo bem */ }
+    }
+
+    function semAcento(texto) {
+        return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function categoriasDeGasto() {
+
+        const lista = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
+
+        // "Retirada da Reserva" não é gasto, e "Empréstimo" precisa de
+        // nome e data de quem vai pagar (só na tela completa).
+        return lista.filter(c =>
+            c && c.nome && c.natureza !== "Resgate" && !semAcento(c.nome).includes("emprestimo")
+        );
+    }
+
+    function listaDeBancos() {
+
+        const salvos = JSON.parse(localStorage.getItem("bancos"));
+
+        if (Array.isArray(salvos) && salvos.length > 0) return salvos;
+
+        return [
+            { nome: "Nubank", emoji: "🟣" },
+            { nome: "Inter", emoji: "🟠" },
+            { nome: "Mercado Pago", emoji: "⚫" },
+            { nome: "Dinheiro", emoji: "🟢" }
+        ];
+    }
+
+    function preencherSelect(select, itens, selecionado) {
+
+        select.innerHTML = "";
+
+        itens.forEach(item => {
+            const opcao = document.createElement("option");
+            opcao.value = item.valor;
+            opcao.textContent = item.rotulo;
+            select.appendChild(opcao);
+        });
+
+        if (itens.some(item => item.valor === selecionado)) {
+            select.value = selecionado;
+        }
+    }
+
+    function montarOpcoes() {
+
+        const categorias = categoriasDeGasto();
+
+        preencherSelect(
+            campoCategoria,
+            categorias.map(c => ({ valor: c.nome, rotulo: `${iconeCategoriaTexto(c.nome, categoriasSalvas)} ${c.nome}` })),
+            lerPreferencia(CHAVE_ULTIMA_CATEGORIA)
+        );
+
+        preencherSelect(
+            campoBanco,
+            listaDeBancos().map(b => ({ valor: b.nome, rotulo: `${b.emoji || ""} ${b.nome}`.trim() })),
+            lerPreferencia(CHAVE_ULTIMO_BANCO)
+        );
+    }
+
+    function mostrarErro(texto) {
+        caixaErro.textContent = texto;
+        caixaErro.style.display = texto ? "block" : "none";
+    }
+
+    function abrir() {
+
+        montarOpcoes();
+        mostrarErro("");
+
+        formRapido.reset();
+        // reset limpa a seleção: aplica de novo as últimas escolhas
+        montarOpcoes();
+
+        sheetRapido.classList.add("aberto");
+        overlayRapido.classList.add("aberto");
+        sheetRapido.setAttribute("aria-hidden", "false");
+
+        setTimeout(() => campoValor.focus(), 250);
+    }
+
+    function fechar() {
+        sheetRapido.classList.remove("aberto");
+        overlayRapido.classList.remove("aberto");
+        sheetRapido.setAttribute("aria-hidden", "true");
+    }
+
+    btnRapido.addEventListener("click", abrir);
+    overlayRapido.addEventListener("click", fechar);
+    document.getElementById("fecharRapido").addEventListener("click", fechar);
+
+    formRapido.addEventListener("submit", async evento => {
+
+        evento.preventDefault();
+
+        const valor = Math.round(Number(campoValor.value) * 100) / 100;
+
+        if (!(valor > 0)) {
+            mostrarErro("Digite o valor do gasto.");
+            return;
+        }
+
+        if (!campoCategoria.value) {
+            mostrarErro("Escolha uma categoria. Se ainda não tem, crie em Categorias.");
+            return;
+        }
+
+        if (!campoBanco.value) {
+            mostrarErro("Escolha de qual conta saiu o dinheiro.");
+            return;
+        }
+
+        const categoriaEscolhida = categoriasDeGasto().find(c => c.nome === campoCategoria.value);
+
+        botaoSalvar.disabled = true;
+
+        const lista = JSON.parse(localStorage.getItem("movimentacoes")) || [];
+
+        lista.push({
+            id: Date.now(),
+            tipo: "Saída",
+            natureza: categoriaEscolhida ? categoriaEscolhida.natureza : "Despesa",
+            banco: campoBanco.value,
+            categoria: campoCategoria.value,
+            valor,
+            data: new Date().toLocaleDateString("en-CA"),
+            descricao: campoDescricao.value.trim()
+        });
+
+        // espera o Firestore confirmar antes de recarregar, senão o
+        // recarregamento cancela o salvamento no meio
+        await localStorage.setItem("movimentacoes", JSON.stringify(lista));
+
+        guardarPreferencia(CHAVE_ULTIMA_CATEGORIA, campoCategoria.value);
+        guardarPreferencia(CHAVE_ULTIMO_BANCO, campoBanco.value);
+
+        window.location.reload();
+    });
+
+})();

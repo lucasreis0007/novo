@@ -9,7 +9,6 @@
     const PAGINAS = [
         { arquivo: "dashboard.html", icone: "🏠", nome: "Início" },
         { arquivo: "adicionar.html", icone: "➕", nome: "Adicionar" },
-        { arquivo: "posso-gastar.html", icone: "💰", nome: "Posso gastar?" },
         { arquivo: "transferencia.html", icone: "🔁", nome: "Transferir" },
         { arquivo: "calendario.html", icone: "🗓️", nome: "Calendário" },
         { arquivo: "historico.html", icone: "📜", nome: "Histórico" },
