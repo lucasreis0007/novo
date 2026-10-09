@@ -126,6 +126,42 @@ body{
     font-family:inherit;
 }
 
+.filtro-categorias{
+    margin-bottom:16px;
+}
+
+.filtro-categorias-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:8px;
+    font-size:13px;
+    color:#475569;
+    font-weight:bold;
+}
+
+.btn-limpar-categorias{
+    border:none;
+    background:none;
+    color:#4F46E5;
+    font-size:13px;
+    cursor:pointer;
+    padding:4px 0;
+}
+
+.filtro-categorias-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.filtro-categorias-aviso{
+    margin-top:10px;
+    font-size:12px;
+    line-height:1.4;
+    color:#64748B;
+}
+
 .gastos-fixos{
     display:grid;
     grid-template-columns:repeat(3,1fr);
