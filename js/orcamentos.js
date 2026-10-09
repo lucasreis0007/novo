@@ -160,11 +160,12 @@ function gastoNoPeriodo(nomeCategoria, dataInicio, dataFim) {
 
 // ---------------- QUANTO POSSO GASTAR (EM CADA ORÇAMENTO) ----------------
 // Cada orçamento tem a sua própria conta (nada é somado entre orçamentos):
-//   por dia = (limite − gasto no período do orçamento + gasto do dia de referência)
-//             ÷ dias que faltam, contando a partir de hoje (ou do começo do orçamento
-//             se ele ainda não começou)
-//   hoje    = por dia − o que já gastei hoje
-//   janela  = por dia × dias da janela escolhida que caem dentro do orçamento
+//   sobra   = limite − tudo que já foi gasto no período do orçamento
+//   por dia = sobra ÷ número de DIAS DE GASTO que faltam
+// Os dias de gasto são marcados à mão em cada orçamento (orc.diasGasto).
+// Sem nenhum dia marcado, vale todos os dias, de hoje até o fim do orçamento.
+//   hoje    = por dia − o que já gastei hoje (só se hoje for dia marcado)
+//   janela  = por dia × dias marcados da janela escolhida
 //             − o que gastei hoje, se a janela começa hoje
 // A janela é "7 dias" (hoje + 6) ou o período Personalizado escolhido.
 // Dias que já passaram não entram na conta. Nunca mostra negativo.
@@ -239,6 +240,24 @@ function obterJanela() {
     return { inicio, fim, rotulo: "Período escolhido", aviso, invalida };
 }
 
+// primeiro dia que ainda conta: hoje, ou o começo do orçamento se ainda não começou
+function primeiroDiaFuturo(orc) {
+    const hojeISO = isoLocal(new Date());
+    return hojeISO > orc.dataInicio ? hojeISO : orc.dataInicio;
+}
+
+// dias marcados à mão que ainda contam (de hoje em diante, dentro do orçamento)
+function diasMarcadosFuturos(orc) {
+
+    if (!Array.isArray(orc.diasGasto) || orc.diasGasto.length === 0) return [];
+
+    const inicio = primeiroDiaFuturo(orc);
+
+    return [...new Set(orc.diasGasto)]
+        .filter(d => d >= inicio && d <= orc.dataFim)
+        .sort();
+}
+
 function limitesDoOrcamento(orc, janela) {
 
     const hojeISO = isoLocal(new Date());
@@ -254,19 +273,42 @@ function limitesDoOrcamento(orc, janela) {
     const sobrepoe = !janela.invalida && inicioGasto <= fimGasto;
     const gastoJanela = sobrepoe ? gastoNoPeriodo(orc.categoria, inicioGasto, fimGasto) : 0;
 
-    const resultado = { sobrepoe, gastoJanela, hoje: null, janela: null };
+    const resultado = {
+        sobrepoe,
+        gastoJanela,
+        hoje: null,
+        janela: null,
+        diasContados: 0,
+        porDia: 0,
+        personalizado: false,
+        hojeMarcado: false
+    };
 
     // orçamento que já acabou: não há mais quanto gastar
     if (orc.dataFim < hojeISO) return resultado;
 
-    const ref = ativoHoje ? hojeISO : orc.dataInicio;
-    const gastoRef = gastoNoPeriodo(orc.categoria, ref, ref);
+    const inicioFuturo = primeiroDiaFuturo(orc);
+    const marcados = diasMarcadosFuturos(orc);
+    const personalizado = Array.isArray(orc.diasGasto) && orc.diasGasto.length > 0;
 
-    const diasRestantes = diasContando(ref, orc.dataFim);
-    const porDia = Math.max(0, orc.limite - gastoPeriodo + gastoRef) / diasRestantes;
+    const nDias = personalizado ? marcados.length : diasContando(inicioFuturo, orc.dataFim);
+    const hojeMarcado = ativoHoje && (!personalizado || marcados.includes(hojeISO));
+
+    // o que gastei hoje já saiu da sobra; se hoje é dia marcado, devolve
+    // para a conta e depois desconta de "hoje" (assim hoje conta como dia inteiro)
+    const gastoHoje = ativoHoje ? gastoNoPeriodo(orc.categoria, hojeISO, hojeISO) : 0;
+    const montante = sobraAgora + (hojeMarcado ? gastoHoje : 0);
+    const porDia = nDias > 0 ? montante / nDias : 0;
+
+    resultado.personalizado = personalizado;
+    resultado.diasContados = nDias;
+    resultado.porDia = porDia;
+    resultado.hojeMarcado = hojeMarcado;
 
     if (ativoHoje) {
-        resultado.hoje = Math.min(sobraAgora, Math.max(0, porDia - gastoRef));
+        resultado.hoje = hojeMarcado
+            ? Math.min(sobraAgora, Math.max(0, porDia - gastoHoje))
+            : 0;
     }
 
     if (janela.invalida) return resultado;
@@ -274,25 +316,209 @@ function limitesDoOrcamento(orc, janela) {
     // dias que já passaram não entram
     const inicioEfetivo = janela.inicio < hojeISO ? hojeISO : janela.inicio;
 
-    const iniJ = inicioEfetivo > ref ? inicioEfetivo : ref;
+    const iniJ = inicioEfetivo > inicioFuturo ? inicioEfetivo : inicioFuturo;
     const fimJ = janela.fim < orc.dataFim ? janela.fim : orc.dataFim;
 
     if (iniJ > fimJ) return resultado;
 
-    const diasNaJanela = diasContando(iniJ, fimJ);
+    const diasNaJanela = personalizado
+        ? marcados.filter(d => d >= iniJ && d <= fimJ).length
+        : diasContando(iniJ, fimJ);
 
     let valor = porDia * diasNaJanela;
 
-    if (iniJ === ref) {
-        valor -= gastoRef;
-    } else if (ativoHoje && diasRestantes > 1 && gastoRef > porDia) {
+    if (hojeMarcado && iniJ === hojeISO) {
+        valor -= gastoHoje;
+    } else if (hojeMarcado && nDias > 1 && gastoHoje > porDia) {
         // gastei mais que o permitido hoje: o excesso tira dos dias seguintes
-        valor -= (gastoRef - porDia) * diasNaJanela / (diasRestantes - 1);
+        valor -= (gastoHoje - porDia) * diasNaJanela / (nDias - 1);
     }
 
     resultado.janela = Math.min(sobraAgora, Math.max(0, valor));
 
     return resultado;
+}
+
+// ---------------- DIAS DE GASTO (escolha manual) ----------------
+
+const painelDiasAberto = new Set();
+
+const letrasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
+const nomesSemana = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+function alterarDiasGasto(id, novaLista) {
+
+    const orcamentos = carregarOrcamentos();
+    const orc = orcamentos.find(o => o.id === id);
+
+    if (!orc) return;
+
+    orc.diasGasto = [...new Set(novaLista)].sort();
+
+    salvarOrcamentos(orcamentos);
+    renderizarOrcamentos();
+}
+
+// todos os dias de hoje até o fim do orçamento
+function diasPossiveis(orc) {
+
+    const lista = [];
+    const fim = orc.dataFim;
+
+    for (let dia = primeiroDiaFuturo(orc); dia <= fim; dia = mais(dia, 1)) {
+        lista.push(dia);
+    }
+
+    return lista;
+}
+
+function criarSecaoDias(orc) {
+
+    const secao = document.createElement("div");
+    secao.className = "orcamento-dias";
+
+    const hojeISO = isoLocal(new Date());
+
+    if (orc.dataFim < hojeISO) return secao; // orçamento terminou: nada a marcar
+
+    const possiveis = diasPossiveis(orc);
+    const marcados = diasMarcadosFuturos(orc);
+    const personalizado = Array.isArray(orc.diasGasto) && orc.diasGasto.length > 0;
+    const aberto = painelDiasAberto.has(orc.id);
+
+    // ----- topo: título, resumo e botão
+    const topo = document.createElement("div");
+    topo.className = "orcamento-dias-topo";
+
+    const titulo = document.createElement("span");
+    titulo.className = "limite-titulo";
+    titulo.textContent = "📆 Dias de gasto";
+
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn-dias";
+    botao.textContent = aberto ? "Fechar" : "Escolher dias";
+
+    botao.addEventListener("click", () => {
+        if (painelDiasAberto.has(orc.id)) painelDiasAberto.delete(orc.id);
+        else painelDiasAberto.add(orc.id);
+        renderizarOrcamentos();
+    });
+
+    topo.appendChild(titulo);
+    topo.appendChild(botao);
+    secao.appendChild(topo);
+
+    const resumo = document.createElement("p");
+    resumo.className = "limite-gasto-periodo";
+
+    if (!personalizado) {
+        resumo.textContent = `Todos os dias (${possiveis.length} de hoje até o fim). Marque só os dias em que você costuma gastar nessa categoria.`;
+    } else if (marcados.length === 0) {
+        resumo.textContent = "Os dias marcados já passaram. Marque novos dias ou volte para todos os dias.";
+    } else {
+        resumo.textContent = `${marcados.length} ${marcados.length === 1 ? "dia marcado" : "dias marcados"} de hoje em diante. O que sobra é dividido só entre eles.`;
+    }
+
+    secao.appendChild(resumo);
+
+    if (!aberto) return secao;
+
+    // ----- atalhos
+    const atalhos = document.createElement("div");
+    atalhos.className = "limite-chips";
+
+    const criarAtalho = (rotulo, aoClicar) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "limite-chip";
+        b.textContent = rotulo;
+        b.addEventListener("click", aoClicar);
+        atalhos.appendChild(b);
+    };
+
+    const doisDias = dow => possiveis.filter(d => dataDeISO(d).getDay() === dow);
+
+    criarAtalho("Todos os dias", () => alterarDiasGasto(orc.id, []));
+    criarAtalho("Seg a sex", () => alterarDiasGasto(orc.id, possiveis.filter(d => {
+        const dow = dataDeISO(d).getDay();
+        return dow >= 1 && dow <= 5;
+    })));
+    criarAtalho("Sáb e dom", () => alterarDiasGasto(orc.id, possiveis.filter(d => {
+        const dow = dataDeISO(d).getDay();
+        return dow === 0 || dow === 6;
+    })));
+
+    secao.appendChild(atalhos);
+
+    // ----- calendário (cabeçalho com os dias da semana também marca a coluna toda)
+    const grade = document.createElement("div");
+    grade.className = "dias-grade";
+
+    letrasSemana.forEach((letra, dow) => {
+
+        const cab = document.createElement("button");
+        cab.type = "button";
+        cab.className = "dias-cabecalho";
+        cab.textContent = letra;
+        cab.title = `Marcar todos os dias: ${nomesSemana[dow]}`;
+
+        cab.addEventListener("click", () => {
+
+            const daquele = doisDias(dow);
+
+            if (daquele.length === 0) return;
+
+            const todosMarcados = daquele.every(d => marcados.includes(d));
+
+            const base = personalizado ? marcados : [];
+
+            alterarDiasGasto(
+                orc.id,
+                todosMarcados
+                    ? base.filter(d => !daquele.includes(d))
+                    : [...base, ...daquele]
+            );
+        });
+
+        grade.appendChild(cab);
+    });
+
+    if (possiveis.length > 0) {
+        for (let k = 0; k < dataDeISO(possiveis[0]).getDay(); k++) {
+            grade.appendChild(document.createElement("span"));
+        }
+    }
+
+    possiveis.forEach(dia => {
+
+        const celula = document.createElement("button");
+        celula.type = "button";
+        celula.className = "dia-celula";
+
+        if (personalizado && marcados.includes(dia)) celula.classList.add("marcado");
+        if (dia === hojeISO) celula.classList.add("hoje");
+
+        celula.textContent = String(Number(dia.split("-")[2]));
+        celula.title = `${nomesSemana[dataDeISO(dia).getDay()]} ${dataCurta(dia)}`;
+        celula.setAttribute("aria-pressed", String(personalizado && marcados.includes(dia)));
+
+        celula.addEventListener("click", () => {
+
+            const base = personalizado ? marcados : [];
+
+            alterarDiasGasto(
+                orc.id,
+                base.includes(dia) ? base.filter(d => d !== dia) : [...base, dia]
+            );
+        });
+
+        grade.appendChild(celula);
+    });
+
+    secao.appendChild(grade);
+
+    return secao;
 }
 
 function blocoLimitesHTML(orc, janela) {
@@ -318,6 +544,12 @@ function blocoLimitesHTML(orc, janela) {
         if (lim.janela === null) {
             nota += " · não há mais quanto gastar nessas datas.";
         }
+
+        if (lim.diasContados > 0) {
+            nota += `<br>Dividido em ${lim.diasContados} ${lim.personalizado ? "dias marcados" : "dias"}: ${moeda(lim.porDia)} por dia.`;
+        } else if (lim.personalizado) {
+            nota += "<br>Nenhum dia marcado de hoje em diante.";
+        }
     }
 
     return `
@@ -329,7 +561,7 @@ function blocoLimitesHTML(orc, janela) {
 
                 <div class="limite-bloco">
                     <span class="limite-rotulo">Hoje</span>
-                    <span class="limite-datas">${lim.hoje === null ? "Não vale hoje" : "📅 " + dataCurta(hojeISO)}</span>
+                    <span class="limite-datas">${lim.hoje === null ? "Não vale hoje" : (lim.hojeMarcado ? "📅 " + dataCurta(hojeISO) : "Hoje não é dia marcado")}</span>
                     <strong class="limite-valor${zeradoHoje}">${valorHoje}</strong>
                 </div>
 
@@ -474,6 +706,8 @@ function renderizarOrcamentos() {
             ${blocoLimitesHTML(orc, janela)}
         `;
 
+        card.appendChild(criarSecaoDias(orc));
+
         listaOrcamentos.appendChild(card);
     });
 
@@ -530,6 +764,7 @@ function excluirOrcamento(id) {
     const orcamentos = carregarOrcamentos().filter(o => o.id !== id);
 
     salvarOrcamentos(orcamentos);
+    painelDiasAberto.delete(id);
 
     if (orcamentoEditandoId === id) {
         cancelarEdicaoOrcamento();
