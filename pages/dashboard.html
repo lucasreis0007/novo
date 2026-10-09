@@ -46,17 +46,6 @@
 
 <main class="container">
 
-    <!-- Posso gastar? (botão de destaque) -->
-
-    <button type="button" class="btn-posso-gastar" onclick="window.location.href='posso-gastar.html'">
-        <span class="pg-icone">💰</span>
-        <span class="pg-texto">
-            <strong>Posso gastar?</strong>
-            <small>Veja se um gasto cabe no seu planejamento</small>
-        </span>
-        <span class="pg-seta">→</span>
-    </button>
-
     <!-- Filtro de período -->
 
     <section class="filtro-periodo">
@@ -286,6 +275,51 @@
     </section>
 
 </main>
+
+<!-- Gasto rápido: botão + e painel de baixo -->
+
+<button type="button" id="btnRapido" class="fab-add" aria-label="Adicionar gasto rápido">+</button>
+
+<div id="overlayRapido" class="rapido-overlay"></div>
+
+<section id="sheetRapido" class="rapido-sheet" aria-hidden="true">
+
+    <div class="rapido-topo">
+        <h2>Novo gasto</h2>
+        <button type="button" id="fecharRapido" class="rapido-fechar" aria-label="Fechar">✕</button>
+    </div>
+
+    <form id="formRapido">
+
+        <label>
+            Valor (R$)
+            <input id="rapidoValor" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0,00">
+        </label>
+
+        <label>
+            Categoria
+            <select id="rapidoCategoria"></select>
+        </label>
+
+        <label>
+            Conta
+            <select id="rapidoBanco"></select>
+        </label>
+
+        <label>
+            Descrição (opcional)
+            <input id="rapidoDescricao" type="text" placeholder="Ex: Mercado">
+        </label>
+
+        <p id="rapidoErro" class="rapido-erro" style="display:none;"></p>
+
+        <button type="submit" id="rapidoSalvar" class="rapido-salvar">Salvar gasto</button>
+
+        <a href="adicionar.html" class="rapido-mais">Mais opções (entrada, outra data…)</a>
+
+    </form>
+
+</section>
 
 <script type="module" src="../js/dashboard.js"></script>
 
