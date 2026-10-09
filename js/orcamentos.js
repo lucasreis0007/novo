@@ -158,15 +158,24 @@ function gastoNoPeriodo(nomeCategoria, dataInicio, dataFim) {
     return total;
 }
 
-// ---------------- QUANTO POSSO GASTAR (HOJE E NA SEMANA) ----------------
-// Para cada orçamento que vale hoje:
-//   sobra  = limite − tudo que já foi gasto no período (+ o que gastei hoje,
-//            porque o "por dia" é calculado a partir do começo do dia)
-//   por dia = sobra ÷ dias que faltam (hoje até o fim do orçamento)
-//   hoje   = por dia − o que já gastei hoje
-//   7 dias = por dia × dias que faltam nos próximos 7 dias (hoje + 6, ou até
-//            o fim do orçamento, o que vier primeiro) − o que gastei hoje
-// Nunca mostra negativo. O total é a soma dos orçamentos ativos.
+// ---------------- QUANTO POSSO GASTAR (EM CADA ORÇAMENTO) ----------------
+// Cada orçamento tem a sua própria conta (nada é somado entre orçamentos):
+//   por dia = (limite − gasto no período do orçamento + gasto do dia de referência)
+//             ÷ dias que faltam, contando a partir de hoje (ou do começo do orçamento
+//             se ele ainda não começou)
+//   hoje    = por dia − o que já gastei hoje
+//   janela  = por dia × dias da janela escolhida que caem dentro do orçamento
+//             − o que gastei hoje, se a janela começa hoje
+// A janela é "7 dias" (hoje + 6) ou o período Personalizado escolhido.
+// Dias que já passaram não entram na conta. Nunca mostra negativo.
+
+let janelaAtiva = "7dias";
+
+const filtroPeriodoEl = document.getElementById("filtroPeriodo");
+const personalizadoEl = document.getElementById("limitePersonalizado");
+const limiteInicioEl = document.getElementById("limiteInicio");
+const limiteFimEl = document.getElementById("limiteFim");
+const limiteDicaEl = document.getElementById("limiteDica");
 
 function isoLocal(data) {
     return data.toLocaleDateString("en-CA");
@@ -182,110 +191,198 @@ function diasContando(inicioISO, fimISO) {
     return Math.round((dataDeISO(fimISO) - dataDeISO(inicioISO)) / 86400000) + 1;
 }
 
-function calcularLimites() {
-
-    const hoje = new Date();
-    const hojeISO = isoLocal(hoje);
-
-    // últimos dia da janela: hoje + 6 (7 dias contando hoje)
-    const fimJanela = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 6);
-    const fimJanelaISO = isoLocal(fimJanela);
-
-    const ativos = carregarOrcamentos().filter(o => o.dataInicio <= hojeISO && o.dataFim >= hojeISO);
-
-    const linhas = ativos.map(orc => {
-
-        const gastoPeriodo = gastoNoPeriodo(orc.categoria, orc.dataInicio, orc.dataFim);
-        const gastoHoje = gastoNoPeriodo(orc.categoria, hojeISO, hojeISO);
-
-        const diasRestantes = diasContando(hojeISO, orc.dataFim);
-
-        const fimDaJanela = orc.dataFim < fimJanelaISO ? orc.dataFim : fimJanelaISO;
-        const diasNaJanela = diasContando(hojeISO, fimDaJanela);
-
-        const sobraAntesDeHoje = Math.max(0, orc.limite - gastoPeriodo + gastoHoje);
-        const porDia = sobraAntesDeHoje / diasRestantes;
-
-        // também não passa do que ainda sobra no orçamento inteiro
-        const sobraAgora = Math.max(0, orc.limite - gastoPeriodo);
-
-        return {
-            categoria: orc.categoria,
-            hoje: Math.min(sobraAgora, Math.max(0, porDia - gastoHoje)),
-            semana: Math.min(sobraAgora, Math.max(0, porDia * diasNaJanela - gastoHoje))
-        };
-    });
-
-    return {
-        linhas,
-        hoje: linhas.reduce((t, l) => t + l.hoje, 0),
-        semana: linhas.reduce((t, l) => t + l.semana, 0),
-        hojeISO,
-        fimJanelaISO
-    };
+function mais(iso, dias) {
+    const d = dataDeISO(iso);
+    return isoLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias));
 }
 
-function renderizarLimites() {
+// datas no mesmo formato do Controles: "09/10" e "09/10 a 15/10"
+function dataCurta(iso) {
+    const [ano, mes, dia] = iso.split("-");
+    const base = `${dia}/${mes}`;
+    return Number(ano) === new Date().getFullYear() ? base : `${base}/${ano}`;
+}
 
-    const elHoje = document.getElementById("limiteHoje");
-    const elSemana = document.getElementById("limiteSemana");
-    const elHojeDatas = document.getElementById("limiteHojeDatas");
-    const elSemanaDatas = document.getElementById("limiteSemanaDatas");
-    const elDica = document.getElementById("limiteDica");
-    const elLista = document.getElementById("limiteLista");
+function textoDatas(inicio, fim) {
+    return inicio === fim ? `📅 ${dataCurta(inicio)}` : `📅 ${dataCurta(inicio)} a ${dataCurta(fim)}`;
+}
 
-    const resultado = calcularLimites();
+function obterJanela() {
 
-    elLista.innerHTML = "";
+    const hojeISO = isoLocal(new Date());
 
-    // datas no mesmo formato do Controles: "09/10" e "09/10 a 15/10"
-    const dataCurta = iso => {
-        const [, mes, dia] = iso.split("-");
-        return `${dia}/${mes}`;
-    };
-
-    elHojeDatas.textContent = `📅 ${dataCurta(resultado.hojeISO)}`;
-    elSemanaDatas.textContent = `📅 ${dataCurta(resultado.hojeISO)} a ${dataCurta(resultado.fimJanelaISO)}`;
-
-    if (resultado.linhas.length === 0) {
-
-        elHoje.textContent = "—";
-        elSemana.textContent = "—";
-        elHoje.classList.remove("zerado");
-        elSemana.classList.remove("zerado");
-        elDica.textContent = "Crie um orçamento que valha para hoje para ver quanto você pode gastar.";
-        return;
+    if (janelaAtiva !== "personalizado") {
+        return {
+            inicio: hojeISO,
+            fim: mais(hojeISO, 6),
+            rotulo: "Próximos 7 dias",
+            aviso: "",
+            invalida: false
+        };
     }
 
-    elHoje.textContent = moeda(resultado.hoje);
-    elSemana.textContent = moeda(resultado.semana);
+    const inicio = limiteInicioEl.value || hojeISO;
+    const fim = limiteFimEl.value || mais(hojeISO, 6);
 
-    elHoje.classList.toggle("zerado", resultado.hoje < 0.005);
-    elSemana.classList.toggle("zerado", resultado.semana < 0.005);
+    let aviso = "";
+    let invalida = false;
 
-    elDica.textContent =
-        "É a soma do que sobra em cada orçamento que vale hoje, dividida pelos dias que faltam. " +
-        "Gastos em categorias sem orçamento não entram na conta.";
+    if (fim < inicio) {
+        aviso = "A data final precisa ser depois da data inicial.";
+        invalida = true;
+    } else if (inicio < hojeISO && fim >= hojeISO) {
+        aviso = "Dias que já passaram aparecem só no gasto. Na conta de quanto pode gastar, entram só os dias de hoje em diante.";
+    } else if (fim < hojeISO) {
+        aviso = "Esse período já passou: você vê quanto foi gasto, mas não há quanto gastar.";
+    }
 
-    const categorias = carregarCategorias();
-
-    resultado.linhas.forEach(linha => {
-
-        const linhaEl = document.createElement("div");
-        linhaEl.className = "limite-linha";
-
-        const nome = document.createElement("span");
-        nome.textContent = `${iconeCategoriaTexto(linha.categoria, categorias)} ${linha.categoria}`;
-
-        const valores = document.createElement("span");
-        valores.className = "limite-linha-valores";
-        valores.textContent = `hoje ${moeda(linha.hoje)} · 7 dias ${moeda(linha.semana)}`;
-
-        linhaEl.appendChild(nome);
-        linhaEl.appendChild(valores);
-        elLista.appendChild(linhaEl);
-    });
+    return { inicio, fim, rotulo: "Período escolhido", aviso, invalida };
 }
+
+function limitesDoOrcamento(orc, janela) {
+
+    const hojeISO = isoLocal(new Date());
+
+    const ativoHoje = orc.dataInicio <= hojeISO && orc.dataFim >= hojeISO;
+
+    const gastoPeriodo = gastoNoPeriodo(orc.categoria, orc.dataInicio, orc.dataFim);
+    const sobraAgora = Math.max(0, orc.limite - gastoPeriodo);
+
+    // quanto já foi gasto dentro da janela (só o trecho que cai no orçamento)
+    const inicioGasto = janela.inicio > orc.dataInicio ? janela.inicio : orc.dataInicio;
+    const fimGasto = janela.fim < orc.dataFim ? janela.fim : orc.dataFim;
+    const sobrepoe = !janela.invalida && inicioGasto <= fimGasto;
+    const gastoJanela = sobrepoe ? gastoNoPeriodo(orc.categoria, inicioGasto, fimGasto) : 0;
+
+    const resultado = { sobrepoe, gastoJanela, hoje: null, janela: null };
+
+    // orçamento que já acabou: não há mais quanto gastar
+    if (orc.dataFim < hojeISO) return resultado;
+
+    const ref = ativoHoje ? hojeISO : orc.dataInicio;
+    const gastoRef = gastoNoPeriodo(orc.categoria, ref, ref);
+
+    const diasRestantes = diasContando(ref, orc.dataFim);
+    const porDia = Math.max(0, orc.limite - gastoPeriodo + gastoRef) / diasRestantes;
+
+    if (ativoHoje) {
+        resultado.hoje = Math.min(sobraAgora, Math.max(0, porDia - gastoRef));
+    }
+
+    if (janela.invalida) return resultado;
+
+    // dias que já passaram não entram
+    const inicioEfetivo = janela.inicio < hojeISO ? hojeISO : janela.inicio;
+
+    const iniJ = inicioEfetivo > ref ? inicioEfetivo : ref;
+    const fimJ = janela.fim < orc.dataFim ? janela.fim : orc.dataFim;
+
+    if (iniJ > fimJ) return resultado;
+
+    const diasNaJanela = diasContando(iniJ, fimJ);
+
+    let valor = porDia * diasNaJanela;
+
+    if (iniJ === ref) {
+        valor -= gastoRef;
+    } else if (ativoHoje && diasRestantes > 1 && gastoRef > porDia) {
+        // gastei mais que o permitido hoje: o excesso tira dos dias seguintes
+        valor -= (gastoRef - porDia) * diasNaJanela / (diasRestantes - 1);
+    }
+
+    resultado.janela = Math.min(sobraAgora, Math.max(0, valor));
+
+    return resultado;
+}
+
+function blocoLimitesHTML(orc, janela) {
+
+    if (janela.invalida) return "";
+
+    const hojeISO = isoLocal(new Date());
+    const lim = limitesDoOrcamento(orc, janela);
+
+    const valorHoje = lim.hoje === null ? "—" : moeda(lim.hoje);
+    const valorJanela = lim.janela === null ? "—" : moeda(lim.janela);
+
+    const zeradoHoje = lim.hoje !== null && lim.hoje < 0.005 ? " zerado" : "";
+    const zeradoJanela = lim.janela !== null && lim.janela < 0.005 ? " zerado" : "";
+
+    let nota;
+
+    if (!lim.sobrepoe) {
+        nota = "Este orçamento não vale nessas datas.";
+    } else {
+        nota = `Já gasto nesse período: <strong>${moeda(lim.gastoJanela)}</strong>`;
+
+        if (lim.janela === null) {
+            nota += " · não há mais quanto gastar nessas datas.";
+        }
+    }
+
+    return `
+        <div class="orcamento-limites">
+
+            <p class="limite-titulo">💡 Quanto posso gastar</p>
+
+            <div class="limite-blocos">
+
+                <div class="limite-bloco">
+                    <span class="limite-rotulo">Hoje</span>
+                    <span class="limite-datas">${lim.hoje === null ? "Não vale hoje" : "📅 " + dataCurta(hojeISO)}</span>
+                    <strong class="limite-valor${zeradoHoje}">${valorHoje}</strong>
+                </div>
+
+                <div class="limite-bloco">
+                    <span class="limite-rotulo">${janela.rotulo}</span>
+                    <span class="limite-datas">${textoDatas(janela.inicio, janela.fim)}</span>
+                    <strong class="limite-valor${zeradoJanela}">${valorJanela}</strong>
+                </div>
+
+            </div>
+
+            <p class="limite-gasto-periodo">${nota}</p>
+
+        </div>
+    `;
+}
+
+function atualizarFiltroPeriodo(janela) {
+
+    personalizadoEl.style.display = janelaAtiva === "personalizado" ? "flex" : "none";
+
+    limiteDicaEl.textContent = janela.aviso ||
+        "Em cada orçamento: quanto você ainda pode gastar hoje e no período escolhido. " +
+        "Gastos em categorias sem orçamento não entram na conta.";
+}
+
+// botões "7 dias" / "Personalizado" e as datas De/Até
+document.querySelectorAll(".limite-chip").forEach(chip => {
+
+    chip.addEventListener("click", () => {
+
+        janelaAtiva = chip.dataset.janela;
+
+        document.querySelectorAll(".limite-chip").forEach(c => {
+            c.classList.toggle("ativo", c === chip);
+        });
+
+        if (janelaAtiva === "personalizado") {
+
+            const hojeISO = isoLocal(new Date());
+
+            if (!limiteInicioEl.value) limiteInicioEl.value = hojeISO;
+            if (!limiteFimEl.value) limiteFimEl.value = mais(hojeISO, 6);
+        }
+
+        renderizarOrcamentos();
+    });
+});
+
+limiteInicioEl.addEventListener("input", renderizarOrcamentos);
+limiteFimEl.addEventListener("input", renderizarOrcamentos);
+limiteInicioEl.addEventListener("change", renderizarOrcamentos);
+limiteFimEl.addEventListener("change", renderizarOrcamentos);
 
 // ---------------- POPULAR SELECT DE CATEGORIAS ----------------
 
@@ -304,12 +401,16 @@ function popularCategorias() {
 
 function renderizarOrcamentos() {
 
-    renderizarLimites();
+    const janela = obterJanela();
+    atualizarFiltroPeriodo(janela);
 
     const orcamentos = carregarOrcamentos();
     const categorias = carregarCategorias();
 
     listaOrcamentos.innerHTML = "";
+
+    // sem orçamento não há o que filtrar por data
+    filtroPeriodoEl.style.display = orcamentos.length === 0 ? "none" : "block";
 
     if (orcamentos.length === 0) {
         listaOrcamentos.innerHTML = `
@@ -369,6 +470,8 @@ function renderizarOrcamentos() {
             </div>
 
             ${aviso}
+
+            ${blocoLimitesHTML(orc, janela)}
         `;
 
         listaOrcamentos.appendChild(card);
