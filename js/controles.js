@@ -74,6 +74,26 @@ function movimentacoesGastoNoPeriodo(inicioISO, fimISO) {
     );
 }
 
+// ---------------- FILTRO POR CATEGORIA ----------------
+// Vazio = todas as categorias. Com categorias marcadas, só os gastos
+// delas entram nos números do período (total, comparação, quantidade,
+// média, maior gasto e a lista por categoria).
+
+const categoriasFiltro = new Set();
+
+function chaveCategoria(mov) {
+    return mov.categoria || "Outros";
+}
+
+function movimentacoesGastoFiltradas(inicioISO, fimISO) {
+
+    const lista = movimentacoesGastoNoPeriodo(inicioISO, fimISO);
+
+    if (categoriasFiltro.size === 0) return lista;
+
+    return lista.filter(mov => categoriasFiltro.has(chaveCategoria(mov)));
+}
+
 function totalGasto(lista) {
     return lista.reduce((soma, mov) => soma + Number(mov.valor), 0);
 }
@@ -374,8 +394,11 @@ function atualizarQuantoGastei() {
         elPersonalizadoFim ? elPersonalizadoFim.value : ""
     );
 
-    const gastosPeriodo = movimentacoesGastoNoPeriodo(periodo.inicio, periodo.fim);
+    const gastosPeriodo = movimentacoesGastoFiltradas(periodo.inicio, periodo.fim);
     const total = totalGasto(gastosPeriodo);
+
+    // total do período SEM o filtro de categoria (usado na previsão de contas a pagar)
+    const totalGeralPeriodo = totalGasto(movimentacoesGastoNoPeriodo(periodo.inicio, periodo.fim));
 
     // ---- cards fixos: hoje / 7 dias / este mês (sempre visíveis, não mudam com o filtro) ----
 
@@ -395,7 +418,10 @@ function atualizarQuantoGastei() {
     // ---- total do período selecionado ----
 
     document.getElementById("gastoTotalRotulo").textContent =
-        `Total gasto ${rotulosFiltroGasto[filtroGastoAtivo] || "no período selecionado"}`;
+        `Total gasto ${rotulosFiltroGasto[filtroGastoAtivo] || "no período selecionado"}` +
+        (categoriasFiltro.size > 0
+            ? ` (${categoriasFiltro.size} categoria${categoriasFiltro.size > 1 ? "s" : ""})`
+            : "");
 
     document.getElementById("gastoTotalPeriodo").textContent = moeda(total);
 
@@ -403,7 +429,7 @@ function atualizarQuantoGastei() {
 
     const periodoAnterior = periodoAnteriorEquivalente(filtroGastoAtivo, periodo);
     const totalAnterior = totalGasto(
-        movimentacoesGastoNoPeriodo(periodoAnterior.inicio, periodoAnterior.fim)
+        movimentacoesGastoFiltradas(periodoAnterior.inicio, periodoAnterior.fim)
     );
 
     const elComparacao = document.getElementById("gastoComparacao");
@@ -470,14 +496,14 @@ function atualizarQuantoGastei() {
 
     const porCategoriaAnterior = {};
 
-    movimentacoesGastoNoPeriodo(periodoAnterior.inicio, periodoAnterior.fim).forEach(mov => {
+    movimentacoesGastoFiltradas(periodoAnterior.inicio, periodoAnterior.fim).forEach(mov => {
         const cat = mov.categoria || "Outros";
         porCategoriaAnterior[cat] = (porCategoriaAnterior[cat] || 0) + Number(mov.valor);
     });
 
     renderizarGastosPorCategoria(categoriasOrdenadas, total, gastosPeriodo, porCategoriaAnterior, datasAnterior);
 
-    renderizarContasAPagar(periodo, total);
+    renderizarContasAPagar(periodo, totalGeralPeriodo);
 
     renderizarMetaGasto();
 }
@@ -595,6 +621,87 @@ function renderizarGastosPorCategoria(categoriasOrdenadas, total, gastosPeriodo,
     }
 }
 
+// ---------------- FILTRO POR CATEGORIA: CHIPS ----------------
+
+const elChipsCategorias = document.getElementById("chipsCategorias");
+const elBtnLimparCategorias = document.getElementById("btnLimparCategorias");
+const elAvisoFiltroCategorias = document.getElementById("avisoFiltroCategorias");
+
+// Categorias de gasto cadastradas + qualquer categoria que já tenha
+// gasto lançado (mesmo que tenha sido apagada depois).
+function listaDeCategoriasDeGasto() {
+
+    const nomes = new Set();
+
+    const cadastradas = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
+
+    cadastradas
+        .filter(c => c && c.nome && c.natureza === "Despesa")
+        .forEach(c => nomes.add(c.nome));
+
+    movimentacoes.filter(ehGasto).forEach(mov => nomes.add(chaveCategoria(mov)));
+
+    return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function renderizarChipsCategorias() {
+
+    const nomes = listaDeCategoriasDeGasto();
+
+    elChipsCategorias.innerHTML = "";
+
+    const chipTodas = document.createElement("button");
+    chipTodas.type = "button";
+    chipTodas.className = `filtro-gasto-chip${categoriasFiltro.size === 0 ? " ativo" : ""}`;
+    chipTodas.textContent = "Todas";
+    chipTodas.addEventListener("click", () => {
+        categoriasFiltro.clear();
+        aplicarFiltroCategorias();
+    });
+    elChipsCategorias.appendChild(chipTodas);
+
+    nomes.forEach(nome => {
+
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = `filtro-gasto-chip${categoriasFiltro.has(nome) ? " ativo" : ""}`;
+        chip.setAttribute("aria-pressed", String(categoriasFiltro.has(nome)));
+        chip.textContent = `${iconeCategoriaTexto(nome, categoriasSalvas)} ${nome}`;
+
+        chip.addEventListener("click", () => {
+
+            if (categoriasFiltro.has(nome)) {
+                categoriasFiltro.delete(nome);
+            } else {
+                categoriasFiltro.add(nome);
+            }
+
+            aplicarFiltroCategorias();
+        });
+
+        elChipsCategorias.appendChild(chip);
+    });
+
+    const filtrando = categoriasFiltro.size > 0;
+
+    elBtnLimparCategorias.style.display = filtrando ? "inline" : "none";
+
+    elAvisoFiltroCategorias.style.display = filtrando ? "block" : "none";
+    elAvisoFiltroCategorias.textContent = filtrando
+        ? "Filtro valendo para o total do período, a comparação e os detalhes abaixo. Hoje / 7 dias / Este mês, a meta de gasto e as contas a pagar continuam com todos os gastos."
+        : "";
+}
+
+function aplicarFiltroCategorias() {
+    renderizarChipsCategorias();
+    atualizarQuantoGastei();
+}
+
+elBtnLimparCategorias.addEventListener("click", () => {
+    categoriasFiltro.clear();
+    aplicarFiltroCategorias();
+});
+
 // ---------------- FILTROS: EVENTOS ----------------
 
 if (elFiltrosGasto) {
@@ -627,4 +734,5 @@ if (elPersonalizadoFim) {
     });
 }
 
+renderizarChipsCategorias();
 atualizarQuantoGastei();
