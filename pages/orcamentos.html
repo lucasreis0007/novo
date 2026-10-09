@@ -42,33 +42,6 @@
 
 <main class="container">
 
-    <!-- Quanto posso gastar hoje e na semana -->
-    <section class="card-limite" id="cardLimite">
-
-        <h2>💡 Quanto posso gastar</h2>
-
-        <div class="limite-blocos">
-
-            <div class="limite-bloco">
-                <span class="limite-rotulo">Hoje</span>
-                <span class="limite-datas" id="limiteHojeDatas"></span>
-                <strong id="limiteHoje" class="limite-valor">R$ 0,00</strong>
-            </div>
-
-            <div class="limite-bloco">
-                <span class="limite-rotulo">Próximos 7 dias</span>
-                <span class="limite-datas" id="limiteSemanaDatas"></span>
-                <strong id="limiteSemana" class="limite-valor">R$ 0,00</strong>
-            </div>
-
-        </div>
-
-        <p class="limite-dica" id="limiteDica"></p>
-
-        <div class="limite-lista" id="limiteLista"></div>
-
-    </section>
-
     <!-- Novo orçamento -->
     <section class="card-form">
 
@@ -121,6 +94,29 @@
     <!-- Lista de orçamentos -->
     <section class="titulo">
         <h2>Seus orçamentos</h2>
+    </section>
+
+    <!-- Período para ver quanto posso gastar em cada orçamento -->
+    <section class="filtro-periodo" id="filtroPeriodo">
+
+        <div class="limite-chips">
+            <button type="button" class="limite-chip ativo" data-janela="7dias">7 dias</button>
+            <button type="button" class="limite-chip" data-janela="personalizado">Personalizado</button>
+        </div>
+
+        <div class="limite-personalizado" id="limitePersonalizado" style="display:none;">
+            <label>
+                De
+                <input type="date" id="limiteInicio">
+            </label>
+            <label>
+                Até
+                <input type="date" id="limiteFim">
+            </label>
+        </div>
+
+        <p class="limite-dica" id="limiteDica"></p>
+
     </section>
 
     <section class="orcamentos" id="listaOrcamentos">
