@@ -85,13 +85,38 @@ function chaveCategoria(mov) {
     return mov.categoria || "Outros";
 }
 
+// Retiradas que também podem entrar no filtro (só quando marcadas):
+//  - Retirada da Reserva (natureza "Resgate")
+//  - Retirada de uma meta (natureza "Transferência", com metaId)
+// Sem marcar nenhuma, os números continuam sendo só de gastos (Despesa).
+function ehRetirada(mov) {
+
+    if (mov.natureza === "Resgate") return true;
+
+    return mov.natureza === "Transferência" &&
+        Boolean(mov.metaId) &&
+        String(mov.categoria || "").startsWith("Retirada da meta: ");
+}
+
+function filtroTemRetirada() {
+    return [...categoriasFiltro].some(chave => chavesRetirada().has(chave));
+}
+
 function movimentacoesGastoFiltradas(inicioISO, fimISO) {
 
     const lista = movimentacoesGastoNoPeriodo(inicioISO, fimISO);
 
     if (categoriasFiltro.size === 0) return lista;
 
-    return lista.filter(mov => categoriasFiltro.has(chaveCategoria(mov)));
+    const gastos = lista.filter(mov => categoriasFiltro.has(chaveCategoria(mov)));
+
+    const retiradas = movimentacoes.filter(mov =>
+        ehRetirada(mov) &&
+        mov.data && mov.data >= inicioISO && mov.data <= fimISO &&
+        categoriasFiltro.has(chaveCategoria(mov))
+    );
+
+    return [...gastos, ...retiradas];
 }
 
 function totalGasto(lista) {
@@ -418,7 +443,7 @@ function atualizarQuantoGastei() {
     // ---- total do período selecionado ----
 
     document.getElementById("gastoTotalRotulo").textContent =
-        `Total gasto ${rotulosFiltroGasto[filtroGastoAtivo] || "no período selecionado"}` +
+        `${filtroTemRetirada() ? "Total (gastos e retiradas)" : "Total gasto"} ${rotulosFiltroGasto[filtroGastoAtivo] || "no período selecionado"}` +
         (categoriasFiltro.size > 0
             ? ` (${categoriasFiltro.size} categoria${categoriasFiltro.size > 1 ? "s" : ""})`
             : "");
@@ -644,9 +669,49 @@ function listaDeCategoriasDeGasto() {
     return [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
+// Retirada da Reserva + uma retirada para cada meta cadastrada.
+// Cada item: { chave (como fica gravado na movimentação), rotulo }
+function listaDeRetiradas() {
+
+    const itens = [];
+    const vistas = new Set();
+
+    const adicionar = (chave, rotulo) => {
+        if (!chave || vistas.has(chave)) return;
+        vistas.add(chave);
+        itens.push({ chave, rotulo });
+    };
+
+    const cadastradas = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
+
+    cadastradas
+        .filter(c => c && c.nome && c.natureza === "Resgate")
+        .forEach(c => adicionar(c.nome, `🏧 ${c.nome}`));
+
+    const metas = JSON.parse(localStorage.getItem("metas")) || [];
+
+    [...metas]
+        .filter(meta => meta && meta.nome)
+        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"))
+        .forEach(meta => adicionar(`Retirada da meta: ${meta.nome}`, `🎯 Retirada da meta: ${meta.nome}`));
+
+    // retiradas já lançadas (mesmo de meta que foi apagada ou renomeada)
+    movimentacoes.filter(ehRetirada).forEach(mov => {
+        const chave = chaveCategoria(mov);
+        adicionar(chave, `${mov.natureza === "Resgate" ? "🏧" : "🎯"} ${chave}`);
+    });
+
+    return itens;
+}
+
+function chavesRetirada() {
+    return new Set(listaDeRetiradas().map(item => item.chave));
+}
+
 function renderizarChipsCategorias() {
 
     const nomes = listaDeCategoriasDeGasto();
+    const retiradas = listaDeRetiradas();
 
     elChipsCategorias.innerHTML = "";
 
@@ -682,13 +747,35 @@ function renderizarChipsCategorias() {
         elChipsCategorias.appendChild(chip);
     });
 
+    retiradas.forEach(item => {
+
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = `filtro-gasto-chip${categoriasFiltro.has(item.chave) ? " ativo" : ""}`;
+        chip.setAttribute("aria-pressed", String(categoriasFiltro.has(item.chave)));
+        chip.textContent = item.rotulo;
+
+        chip.addEventListener("click", () => {
+
+            if (categoriasFiltro.has(item.chave)) {
+                categoriasFiltro.delete(item.chave);
+            } else {
+                categoriasFiltro.add(item.chave);
+            }
+
+            aplicarFiltroCategorias();
+        });
+
+        elChipsCategorias.appendChild(chip);
+    });
+
     const filtrando = categoriasFiltro.size > 0;
 
     elBtnLimparCategorias.style.display = filtrando ? "inline" : "none";
 
     elAvisoFiltroCategorias.style.display = filtrando ? "block" : "none";
     elAvisoFiltroCategorias.textContent = filtrando
-        ? "Filtro valendo para o total do período, a comparação e os detalhes abaixo. Hoje / 7 dias / Este mês, a meta de gasto e as contas a pagar continuam com todos os gastos."
+        ? "Filtro valendo para o total do período, a comparação e os detalhes abaixo. Hoje / 7 dias / Este mês, a meta de gasto e as contas a pagar continuam com todos os gastos. Retiradas da reserva e das metas só entram nos números quando você as marca."
         : "";
 }
 

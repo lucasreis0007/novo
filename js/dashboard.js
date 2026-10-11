@@ -1049,6 +1049,33 @@ notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLem
     const caixaErro = document.getElementById("rapidoErro");
     const botaoSalvar = document.getElementById("rapidoSalvar");
 
+    // Aceita o valor do jeito brasileiro: "12,50", "1.234,56", "12.5", "R$ 12,50".
+    // (O campo é de texto porque o campo numérico do navegador recusa a vírgula
+    // em muitos aparelhos.)
+    function lerValorBR(texto) {
+
+        let t = String(texto || "").replace(/R\$|\s/g, "");
+
+        if (!t) return NaN;
+
+        if (t.includes(",")) {
+            // vírgula é o decimal; pontos são separador de milhar
+            t = t.replace(/\./g, "").replace(",", ".");
+        } else if ((t.match(/\./g) || []).length > 1 || /^\d{1,3}\.\d{3}$/.test(t)) {
+            // "1.234" ou "1.234.567" sem vírgula: pontos de milhar
+            t = t.replace(/\./g, "");
+        }
+
+        if (!/^\d+(\.\d+)?$/.test(t)) return NaN;
+
+        return Math.round(Number(t) * 100) / 100;
+    }
+
+    // deixa digitar só números, vírgula e ponto
+    campoValor.addEventListener("input", () => {
+        campoValor.value = campoValor.value.replace(/[^\d.,]/g, "");
+    });
+
     const CHAVE_ULTIMA_CATEGORIA = "gastoRapido.categoria";
     const CHAVE_ULTIMO_BANCO = "gastoRapido.banco";
 
@@ -1158,10 +1185,10 @@ notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLem
 
         evento.preventDefault();
 
-        const valor = Math.round(Number(campoValor.value) * 100) / 100;
+        const valor = lerValorBR(campoValor.value);
 
         if (!(valor > 0)) {
-            mostrarErro("Digite o valor do gasto.");
+            mostrarErro("Digite o valor do gasto, por exemplo 12,50.");
             return;
         }
 
