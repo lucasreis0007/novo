@@ -172,6 +172,8 @@ body{
 .resumo-card.entrada h3{ color:#16a34a; }
 .resumo-card.despesa h3{ color:#dc2626; }
 .resumo-card.saldo h3{ color:#4F46E5; }
+.resumo-card.guardado h3{ color:#D97706; }
+.resumo-card.guardado{ grid-column:1 / -1; }
 
 .bloco-grafico{
     background:white;
@@ -227,4 +229,72 @@ body{
         grid-template-columns:1fr;
     }
 
+}
+
+
+/* Filtro por categoria */
+
+.filtro-categorias-topo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+.filtro-categorias-topo h2{
+    font-size:17px;
+    color:#333;
+}
+
+.btn-limpar-categorias{
+    border:none;
+    background:none;
+    color:#4F46E5;
+    font-size:13px;
+    cursor:pointer;
+    padding:4px 0;
+}
+
+.filtro-grupo-titulo{
+    font-size:12px;
+    font-weight:bold;
+    color:#777;
+    margin:12px 0 6px;
+}
+
+.filtro-categorias-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.filtro-gasto-chip{
+    border:1px solid #ddd;
+    background:white;
+    color:#555;
+    padding:8px 14px;
+    border-radius:50px;
+    font-size:13px;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.filtro-gasto-chip.ativo{
+    background:#4F46E5;
+    border-color:#4F46E5;
+    color:white;
+}
+
+.filtro-categorias-aviso{
+    margin-top:12px;
+    font-size:12px;
+    line-height:1.4;
+    color:#64748B;
+}
+
+.pdf-categorias-texto{
+    font-size:14px;
+    color:#333;
+    padding:10px 0;
+    line-height:1.4;
 }
