@@ -51,6 +51,20 @@
 
     </section>
 
+    <!-- Filtro por categoria (pode marcar mais de uma) -->
+    <section class="filtros filtro-categorias" id="filtroCategorias">
+
+        <div class="filtro-categorias-topo">
+            <h2>📁 Filtrar por categoria</h2>
+            <button type="button" id="btnLimparCategorias" class="btn-limpar-categorias" style="display:none;">Limpar</button>
+        </div>
+
+        <div id="chipsCategorias"></div>
+
+        <p class="filtro-categorias-aviso" id="avisoFiltroCategorias"></p>
+
+    </section>
+
     <section class="filtros exportar-pdf">
 
         <h2>🧾 Exportar PDF</h2>
@@ -75,10 +89,8 @@
             </div>
 
             <div class="campo">
-                <label for="pdfCategoria">Categoria</label>
-                <select id="pdfCategoria">
-                    <option value="todos">Todas as categorias</option>
-                </select>
+                <label>Categorias</label>
+                <p id="pdfCategoriasTexto" class="pdf-categorias-texto">Todas</p>
             </div>
 
             <div class="campo">
@@ -122,6 +134,11 @@
             <h3 id="resumoSaldo">R$ 0,00</h3>
         </div>
 
+        <div class="resumo-card guardado" id="cardGuardado" style="display:none;">
+            <p>🏦 Guardado em reserva e metas</p>
+            <h3 id="resumoGuardado">R$ 0,00</h3>
+        </div>
+
     </section>
 
     <section class="bloco-grafico">
@@ -134,7 +151,7 @@
 
     <section class="bloco-grafico">
 
-        <h2>Despesas por categoria</h2>
+        <h2 id="tituloRosca">Despesas por categoria</h2>
 
         <canvas id="graficoRosca" height="260"></canvas>
 
