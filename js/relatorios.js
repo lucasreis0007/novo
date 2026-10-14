@@ -38,6 +38,74 @@ function rotuloMes(chave) {
     return `${nomesMes[indice] || mes} de ${ano}`;
 }
 
+// ---------------- FILTRO POR CATEGORIA ----------------
+// Vazio = todas as categorias. Vale para o resumo, os gráficos e o PDF.
+// Inclui também as retiradas da reserva e de cada meta cadastrada.
+
+const categoriasFiltro = new Set();
+
+function chaveCategoria(mov) {
+    return mov.categoria || "Outros";
+}
+
+function passaFiltroCategoria(mov) {
+    return categoriasFiltro.size === 0 || categoriasFiltro.has(chaveCategoria(mov));
+}
+
+function ehRetiradaMeta(mov) {
+    return mov.natureza === "Transferência" &&
+        Boolean(mov.metaId) &&
+        String(mov.categoria || "").startsWith("Retirada da meta: ");
+}
+
+const gruposDeCategoria = ["Despesas", "Entradas", "Reserva e metas", "Outros"];
+
+function grupoDaMovimentacao(mov) {
+
+    if (mov.natureza === "Despesa") return "Despesas";
+
+    if (
+        ["Resgate", "Reserva", "Meta", "RendimentoMeta", "Rendimento", "Investimento"].includes(mov.natureza) ||
+        ehRetiradaMeta(mov)
+    ) return "Reserva e metas";
+
+    if (mov.tipo === "Entrada") return "Entradas";
+
+    return "Outros";
+}
+
+// chave da categoria -> grupo onde aparece no filtro
+function montarCategoriasDoFiltro() {
+
+    const mapa = new Map();
+
+    const adicionar = (chave, grupo) => {
+        if (chave && !mapa.has(chave)) mapa.set(chave, grupo);
+    };
+
+    const saida = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
+
+    saida.forEach(cat => {
+        if (cat && cat.nome) adicionar(cat.nome, cat.natureza === "Despesa" ? "Despesas" : "Reserva e metas");
+    });
+
+    const entrada = Array.isArray(categoriasSalvas.entrada) ? categoriasSalvas.entrada : [];
+
+    entrada.forEach(cat => adicionar(typeof cat === "string" ? cat : cat?.nome, "Entradas"));
+
+    // uma retirada para cada meta cadastrada
+    const metas = JSON.parse(localStorage.getItem("metas")) || [];
+
+    metas.forEach(meta => {
+        if (meta && meta.nome) adicionar(`Retirada da meta: ${meta.nome}`, "Reserva e metas");
+    });
+
+    // tudo que já foi lançado (mesmo de categoria ou meta que foi apagada)
+    movimentacoes.forEach(mov => adicionar(chaveCategoria(mov), grupoDaMovimentacao(mov)));
+
+    return mapa;
+}
+
 // ---------------- FILTRO DE MÊS ----------------
 
 function popularFiltroMes() {
@@ -63,7 +131,7 @@ popularFiltroMes();
 const pdfDataInicio = document.getElementById("pdfDataInicio");
 const pdfDataFim = document.getElementById("pdfDataFim");
 const pdfBanco = document.getElementById("pdfBanco");
-const pdfCategoria = document.getElementById("pdfCategoria");
+const pdfCategoriasTexto = document.getElementById("pdfCategoriasTexto");
 const pdfTipo = document.getElementById("pdfTipo");
 const btnExportarPdf = document.getElementById("btnExportarPdf");
 const pdfAviso = document.getElementById("pdfAviso");
@@ -112,16 +180,6 @@ function popularFiltrosExportacao() {
         pdfBanco.appendChild(option);
     });
 
-    const categorias = [...new Set(
-        movimentacoes.map(mov => mov.categoria).filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    categorias.forEach(categoria => {
-        const option = document.createElement("option");
-        option.value = categoria;
-        option.textContent = `${iconeCategoriaTexto(categoria, categoriasSalvas)} ${categoria}`;
-        pdfCategoria.appendChild(option);
-    });
 }
 
 popularFiltrosExportacao();
@@ -131,14 +189,13 @@ function movimentacoesFiltradasParaPdf() {
     const inicio = pdfDataInicio.value; // "YYYY-MM-DD" ou ""
     const fim = pdfDataFim.value;
     const banco = pdfBanco.value;
-    const categoria = pdfCategoria.value;
     const tipo = pdfTipo.value;
 
     return movimentacoes
         .filter(mov => !inicio || mov.data >= inicio)
         .filter(mov => !fim || mov.data <= fim)
         .filter(mov => banco === "todos" || mov.banco === banco)
-        .filter(mov => categoria === "todos" || mov.categoria === categoria)
+        .filter(passaFiltroCategoria)
         .filter(mov => {
             if (tipo === "todos") return true;
             if (tipo === "Entrada") return mov.tipo === "Entrada" && mov.natureza !== "Transferência";
@@ -183,17 +240,29 @@ function gerarPdf() {
     const filtrosTexto = [
         `Período: ${pdfDataInicio.value ? formatarDataBr(pdfDataInicio.value) : "início"} a ${pdfDataFim.value ? formatarDataBr(pdfDataFim.value) : "hoje"}`,
         `Banco: ${pdfBanco.value === "todos" ? "Todos" : pdfBanco.value}`,
-        `Categoria: ${pdfCategoria.value === "todos" ? "Todas" : pdfCategoria.value}`,
         `Tipo: ${pdfTipo.options[pdfTipo.selectedIndex].textContent}`
     ];
 
     doc.text(filtrosTexto, 14, 26);
 
+    // categorias marcadas (quebra em linhas pra não sair da folha)
+    const textoCategorias = categoriasFiltro.size === 0
+        ? "Categorias: Todas"
+        : `Categorias: ${[...categoriasFiltro].sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ")}`;
+
+    const linhasCategorias = doc.splitTextToSize(textoCategorias, 180);
+
+    doc.text(linhasCategorias, 14, 26 + filtrosTexto.length * 5 + 1);
+
     let entradas = 0;
     let despesas = 0;
 
     resultado.forEach(mov => {
-        if (mov.natureza === "Transferência") return;
+        if (mov.natureza === "Transferência") {
+            // retirada de meta marcada no filtro conta como entrada
+            if (categoriasFiltro.size > 0 && ehRetiradaMeta(mov)) entradas += Number(mov.valor);
+            return;
+        }
         if (mov.natureza === "Meta" || mov.natureza === "RendimentoMeta") return;
         if (mov.tipo === "Entrada") {
             entradas += Number(mov.valor);
@@ -214,7 +283,7 @@ function gerarPdf() {
     doc.autoTable({
         head: [["Data", "Categoria", "Descrição", "Banco", "Tipo", "Valor"]],
         body: linhas,
-        startY: 48,
+        startY: 26 + (filtrosTexto.length + linhasCategorias.length) * 5 + 8,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [79, 70, 229] }
     });
@@ -239,27 +308,38 @@ function movimentacoesDoPeriodo() {
 
     const mesSelecionado = filtroMes.value;
 
-    if (mesSelecionado === "todos") return movimentacoes;
+    const doMes = mesSelecionado === "todos"
+        ? movimentacoes
+        : movimentacoes.filter(mov => chaveMes(mov.data) === mesSelecionado);
 
-    return movimentacoes.filter(mov => chaveMes(mov.data) === mesSelecionado);
+    return doMes.filter(passaFiltroCategoria);
 }
 
 function atualizarResumo() {
 
     const periodo = movimentacoesDoPeriodo();
 
+    const filtrando = categoriasFiltro.size > 0;
+
     let entradas = 0;
     let despesas = 0;
+    let guardado = 0;
 
     periodo.forEach(mov => {
 
-        // Transferência entre contas não é receita nem despesa de verdade
-        if (mov.natureza === "Transferência") return;
+        // Transferência entre contas não é receita nem despesa de verdade.
+        // Retirada de meta só conta (como entrada) quando você a marcou no filtro.
+        if (mov.natureza === "Transferência") {
+            if (filtrando && ehRetiradaMeta(mov)) entradas += Number(mov.valor);
+            return;
+        }
 
         if (mov.tipo === "Entrada" || mov.natureza === "Resgate") {
             entradas += Number(mov.valor);
         } else if (mov.natureza === "Despesa") {
             despesas += Number(mov.valor);
+        } else if (["Reserva", "Meta", "Investimento"].includes(mov.natureza)) {
+            guardado += Number(mov.valor);
         }
 
     });
@@ -267,6 +347,10 @@ function atualizarResumo() {
     document.getElementById("resumoEntradas").textContent = moeda(entradas);
     document.getElementById("resumoDespesas").textContent = moeda(despesas);
     document.getElementById("resumoSaldo").textContent = moeda(entradas - despesas);
+
+    // o que foi guardado só aparece quando o filtro pega reserva ou metas
+    document.getElementById("cardGuardado").style.display = filtrando && guardado > 0 ? "block" : "none";
+    document.getElementById("resumoGuardado").textContent = moeda(guardado);
 }
 
 // ---------------- GRÁFICO DE BARRAS (6 meses) ----------------
@@ -289,14 +373,23 @@ function prepararDadosBarras() {
 
     const meses = ultimosMeses(6);
 
+    const filtrando = categoriasFiltro.size > 0;
+    const filtradas = movimentacoes.filter(passaFiltroCategoria);
+
     const entradasPorMes = meses.map(chave =>
-        movimentacoes
-            .filter(mov => chaveMes(mov.data) === chave && (mov.tipo === "Entrada" || mov.natureza === "Resgate") && mov.natureza !== "Transferência")
+        filtradas
+            .filter(mov =>
+                chaveMes(mov.data) === chave &&
+                (
+                    ((mov.tipo === "Entrada" || mov.natureza === "Resgate") && mov.natureza !== "Transferência") ||
+                    (filtrando && ehRetiradaMeta(mov))
+                )
+            )
             .reduce((total, mov) => total + Number(mov.valor), 0)
     );
 
     const despesasPorMes = meses.map(chave =>
-        movimentacoes
+        filtradas
             .filter(mov => chaveMes(mov.data) === chave && mov.natureza === "Despesa")
             .reduce((total, mov) => total + Number(mov.valor), 0)
     );
@@ -408,10 +501,16 @@ function prepararDadosRosca() {
 
     const periodo = movimentacoesDoPeriodo();
 
+    const filtrando = categoriasFiltro.size > 0;
+
     const totais = {};
 
+    // Sem filtro: só despesas. Com filtro: tudo que você marcou
+    // (despesas, entradas, retiradas, reserva e metas), menos transferência entre contas.
     periodo
-        .filter(mov => mov.natureza === "Despesa")
+        .filter(mov => filtrando
+            ? (mov.natureza !== "Transferência" || ehRetiradaMeta(mov))
+            : mov.natureza === "Despesa")
         .forEach(mov => {
             const chave = mov.categoria || "Outros";
             totais[chave] = (totais[chave] || 0) + Number(mov.valor);
@@ -445,7 +544,10 @@ function desenharRosca() {
         ctx.font = "14px Arial";
         ctx.fillStyle = "#777";
         ctx.textAlign = "center";
-        ctx.fillText("Sem despesas nesse período.", largura / 2, altura / 2);
+        ctx.fillText(
+            categoriasFiltro.size > 0 ? "Sem movimentações nesse período." : "Sem despesas nesse período.",
+            largura / 2, altura / 2
+        );
         return;
     }
 
@@ -490,12 +592,105 @@ function desenharRosca() {
     ctx.fill();
 }
 
+// ---------------- FILTRO POR CATEGORIA: CHIPS ----------------
+
+const elChipsCategorias = document.getElementById("chipsCategorias");
+const elBtnLimparCategorias = document.getElementById("btnLimparCategorias");
+const elAvisoFiltroCategorias = document.getElementById("avisoFiltroCategorias");
+
+function criarChip(rotulo, ativo, aoClicar) {
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `filtro-gasto-chip${ativo ? " ativo" : ""}`;
+    chip.setAttribute("aria-pressed", String(ativo));
+    chip.textContent = rotulo;
+    chip.addEventListener("click", aoClicar);
+
+    return chip;
+}
+
+function renderizarChipsCategorias() {
+
+    const mapa = montarCategoriasDoFiltro();
+
+    elChipsCategorias.innerHTML = "";
+
+    // "Todas" fica sozinha no topo
+    const linhaTodas = document.createElement("div");
+    linhaTodas.className = "filtro-categorias-chips";
+    linhaTodas.appendChild(criarChip("Todas", categoriasFiltro.size === 0, () => {
+        categoriasFiltro.clear();
+        aplicarFiltroCategorias();
+    }));
+    elChipsCategorias.appendChild(linhaTodas);
+
+    gruposDeCategoria.forEach(grupo => {
+
+        const nomes = [...mapa.entries()]
+            .filter(([, g]) => g === grupo)
+            .map(([nome]) => nome)
+            .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+        if (nomes.length === 0) return;
+
+        const titulo = document.createElement("p");
+        titulo.className = "filtro-grupo-titulo";
+        titulo.textContent = grupo;
+        elChipsCategorias.appendChild(titulo);
+
+        const linha = document.createElement("div");
+        linha.className = "filtro-categorias-chips";
+
+        nomes.forEach(nome => {
+
+            linha.appendChild(criarChip(
+                `${iconeCategoriaTexto(nome, categoriasSalvas)} ${nome}`,
+                categoriasFiltro.has(nome),
+                () => {
+                    if (categoriasFiltro.has(nome)) categoriasFiltro.delete(nome);
+                    else categoriasFiltro.add(nome);
+                    aplicarFiltroCategorias();
+                }
+            ));
+        });
+
+        elChipsCategorias.appendChild(linha);
+    });
+
+    const filtrando = categoriasFiltro.size > 0;
+
+    elBtnLimparCategorias.style.display = filtrando ? "inline" : "none";
+
+    elAvisoFiltroCategorias.textContent = filtrando
+        ? "Filtro valendo para o resumo, os gráficos e o PDF. Retiradas de meta marcadas contam como entrada."
+        : "Marque uma ou mais categorias para ver só elas no resumo, nos gráficos e no PDF.";
+
+    // texto do PDF
+    pdfCategoriasTexto.textContent = filtrando
+        ? [...categoriasFiltro].sort((a, b) => a.localeCompare(b, "pt-BR")).join(", ")
+        : "Todas";
+}
+
+function aplicarFiltroCategorias() {
+    renderizarChipsCategorias();
+    renderizarTudo();
+}
+
+elBtnLimparCategorias.addEventListener("click", () => {
+    categoriasFiltro.clear();
+    aplicarFiltroCategorias();
+});
+
 // ---------------- INICIALIZAÇÃO ----------------
 
 function renderizarTudo() {
     atualizarResumo();
     desenharBarras();
     desenharRosca();
+
+    document.getElementById("tituloRosca").textContent =
+        categoriasFiltro.size > 0 ? "Por categoria (selecionadas)" : "Despesas por categoria";
 }
 
 filtroMes.addEventListener("change", renderizarTudo);
@@ -504,4 +699,5 @@ window.addEventListener("resize", () => {
     desenharRosca();
 });
 
+renderizarChipsCategorias();
 renderizarTudo();
