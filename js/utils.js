@@ -369,3 +369,66 @@ export function idIconeCategoria(nomeCategoria, categorias) {
 
     return encontrado ? encontrado[1] : ICONE_PADRAO;
 }
+
+
+// ======================================================================
+// LEMBRETES MENSAIS: a partir de quando valem
+// Um lembrete mensal só existe a partir da sua data de início (lembrete.dataInicio).
+// Sem isso ele aparecia também nos meses ANTERIORES, como conta atrasada.
+// Lembretes antigos (sem dataInicio) valem a partir do dia em que foram criados
+// (o id é o Date.now() da criação). Uma ocorrência já paga sempre continua
+// aparecendo, para não sumir do histórico.
+// ======================================================================
+
+function isoDeNumeros(ano, mes, dia) {
+    return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+// data em que o lembrete passou a valer ("YYYY-MM-DD"), ou "" se não der pra saber
+export function dataInicioLembrete(lembrete) {
+
+    if (lembrete.dataInicio) return lembrete.dataInicio;
+
+    const criado = new Date(Number(lembrete.id));
+
+    if (Number.isNaN(criado.getTime())) return "";
+
+    return isoDeNumeros(criado.getFullYear(), criado.getMonth() + 1, criado.getDate());
+}
+
+// primeira ocorrência de um lembrete mensal (usada para preencher o campo "Começa em")
+export function primeiraOcorrenciaMensal(lembrete) {
+
+    if (lembrete.dataInicio) return lembrete.dataInicio;
+
+    const base = dataInicioLembrete(lembrete);
+
+    if (!base || !lembrete.diaDoMes) return base;
+
+    let [ano, mes] = base.split("-").map(Number);
+
+    for (let i = 0; i < 3; i++) {
+
+        const dia = Math.min(lembrete.diaDoMes, new Date(ano, mes, 0).getDate());
+        const iso = isoDeNumeros(ano, mes, dia);
+
+        if (iso >= base) return iso;
+
+        mes += 1;
+        if (mes > 12) { mes = 1; ano += 1; }
+    }
+
+    return base;
+}
+
+// true se essa data (de um lembrete mensal) já faz parte dele
+export function ocorrenciaMensalValida(lembrete, dataISO) {
+
+    const [ano, mes] = dataISO.split("-");
+
+    if (lembrete.pagamentos && lembrete.pagamentos[`${ano}-${mes}`]) return true;
+
+    const inicio = dataInicioLembrete(lembrete);
+
+    return !inicio || dataISO >= inicio;
+}

@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto, ocorrenciaMensalValida } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -238,7 +238,11 @@ function contasAPagarNoPeriodo(inicioISO, fimISO) {
             const dataISO = formatarISOGastos(new Date(ano, mes, dia));
             const chave = `${ano}-${String(mes + 1).padStart(2, "0")}`;
 
-            if (dataISO >= inicioISO && dataISO <= fimISO && !pagamentos[chave]) {
+            if (
+                dataISO >= inicioISO && dataISO <= fimISO &&
+                !pagamentos[chave] &&
+                ocorrenciaMensalValida(lembrete, dataISO)
+            ) {
                 pendentes.push({ lembrete, data: dataISO });
             }
 

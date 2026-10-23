@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, iconeCategoriaTexto } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, iconeCategoriaTexto, ocorrenciaMensalValida } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -652,18 +652,23 @@ function proximaOcorrenciaLembreteDash(lembrete) {
     const ano = hojeDash.getFullYear();
     const mes = hojeDash.getMonth();
 
-    const diaEsteMes = diaEfetivoLembreteDash(lembrete, ano, mes);
-    const dataEsteMes = formatarISODash(new Date(ano, mes, diaEsteMes));
+    // Procura, a partir deste mês, a primeira ocorrência que já vale
+    // (não é anterior ao início do lembrete) e ainda não foi paga.
+    // Atrasada = deste mês, vencida e não paga.
+    for (let i = 0; i < 24; i++) {
 
-    if (!lembreteEstaPagoDash(lembrete, dataEsteMes)) {
-        return { data: dataEsteMes, pago: false };
+        const mesAlvo = new Date(ano, mes + i, 1);
+
+        const dia = diaEfetivoLembreteDash(lembrete, mesAlvo.getFullYear(), mesAlvo.getMonth());
+        const dataAlvo = formatarISODash(new Date(mesAlvo.getFullYear(), mesAlvo.getMonth(), dia));
+
+        if (!ocorrenciaMensalValida(lembrete, dataAlvo)) continue;
+        if (lembreteEstaPagoDash(lembrete, dataAlvo)) continue;
+
+        return { data: dataAlvo, pago: false };
     }
 
-    const proxMes = new Date(ano, mes + 1, 1);
-    const diaProxMes = diaEfetivoLembreteDash(lembrete, proxMes.getFullYear(), proxMes.getMonth());
-    const dataProxMes = formatarISODash(new Date(proxMes.getFullYear(), proxMes.getMonth(), diaProxMes));
-
-    return { data: dataProxMes, pago: false };
+    return { data: null, pago: true };
 }
 
 function prepararLembretesDashboard() {

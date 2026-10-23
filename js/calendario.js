@@ -1,4 +1,4 @@
-import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao } from "./utils.js";
+import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, ocorrenciaMensalValida, primeiraOcorrenciaMensal } from "./utils.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -35,6 +35,10 @@ const lembreteTitulo = document.getElementById("lembreteTitulo");
 const lembreteValor = document.getElementById("lembreteValor");
 const lembreteRecorrente = document.getElementById("lembreteRecorrente");
 const lembreteObservacao = document.getElementById("lembreteObservacao");
+const lembreteInicio = document.getElementById("lembreteInicio");
+const campoLembreteInicio = document.getElementById("campoLembreteInicio");
+const rotuloLembreteInicio = document.getElementById("rotuloLembreteInicio");
+const dicaInicioLembrete = document.getElementById("dicaInicioLembrete");
 const btnSalvarLembrete = document.getElementById("btnSalvarLembrete");
 const btnCancelarLembrete = document.getElementById("btnCancelarLembrete");
 
@@ -237,7 +241,8 @@ function lembretesDoDia(dataISO) {
     return lembretes.filter(lembrete => {
 
         if (lembrete.recorrente) {
-            return diaEfetivoLembrete(lembrete, ano, mesIndex) === dia;
+            return diaEfetivoLembrete(lembrete, ano, mesIndex) === dia &&
+                ocorrenciaMensalValida(lembrete, dataISO);
         }
 
         return lembrete.data === dataISO;
@@ -706,6 +711,52 @@ function renderizarDia() {
 
 let lembreteEditandoId = null;
 
+// valor do campo "Começa em" quando o painel abriu (pra saber se a pessoa mexeu)
+let inicioLembreteOriginal = "";
+
+function formatarDataBrLembrete(dataISO) {
+    const [ano, mes, dia] = dataISO.split("-");
+    return `${dia}/${mes}/${ano}`;
+}
+
+// O campo de data aparece nos dois tipos, pra ficar claro QUANDO o lembrete vale:
+//  - mensal: "Primeiro vencimento" (meses antes dele nunca aparecem)
+//  - único: "Data do lembrete"
+function atualizarCampoInicioLembrete() {
+
+    const recorrente = lembreteRecorrente.checked;
+
+    campoLembreteInicio.style.display = "";
+    rotuloLembreteInicio.textContent = recorrente ? "Primeiro vencimento" : "Data do lembrete";
+
+    const escolhida = lembreteInicio.value;
+
+    if (!escolhida) {
+        dicaInicioLembrete.textContent = "";
+        return;
+    }
+
+    const dia = paraDataLocal(escolhida).getDate();
+
+    dicaInicioLembrete.textContent = recorrente
+        ? `Vence todo dia ${dia}, a partir de ${formatarDataBrLembrete(escolhida)}. Meses antes disso não aparecem.`
+        : `Aparece só em ${formatarDataBrLembrete(escolhida)}.`;
+}
+
+lembreteRecorrente.addEventListener("change", atualizarCampoInicioLembrete);
+lembreteInicio.addEventListener("input", atualizarCampoInicioLembrete);
+lembreteInicio.addEventListener("change", atualizarCampoInicioLembrete);
+
+// Data da ocorrência seguinte (mês que vem) de um lembrete mensal
+function ocorrenciaDoMesSeguinte(lembrete, dataISO) {
+
+    const base = paraDataLocal(dataISO);
+    const alvo = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+    const dia = diaEfetivoLembrete(lembrete, alvo.getFullYear(), alvo.getMonth());
+
+    return formatarISO(new Date(alvo.getFullYear(), alvo.getMonth(), dia));
+}
+
 function abrirPainelLembrete() {
     painelLembrete.classList.remove("oculto");
 
@@ -715,7 +766,13 @@ function abrirPainelLembrete() {
         campoLembreteBanco.style.display = "";
         campoLembreteCategoria.style.display = "";
         dicaLembrete.style.display = "";
+
+        // lembrete novo: começa no dia que está selecionado no calendário
+        inicioLembreteOriginal = diaSelecionadoISO;
+        lembreteInicio.value = diaSelecionadoISO;
     }
+
+    atualizarCampoInicioLembrete();
 
     btnAdicionarLembrete.classList.add("ativo");
     lembreteTitulo.focus();
@@ -729,6 +786,8 @@ function fecharPainelLembrete() {
     lembreteValor.value = "";
     lembreteObservacao.value = "";
     lembreteRecorrente.checked = true;
+    lembreteInicio.value = "";
+    inicioLembreteOriginal = "";
     lembreteBanco.value = "";
     lembreteCategoria.value = "";
     btnSalvarLembrete.textContent = "💾 Salvar lembrete";
@@ -747,6 +806,14 @@ function abrirEdicaoLembrete(lembrete) {
 
     abrirPainelLembrete();
 
+    // "Começa em": primeira ocorrência do lembrete mensal (ou a data do lembrete único)
+    inicioLembreteOriginal = lembrete.recorrente
+        ? primeiraOcorrenciaMensal(lembrete)
+        : (lembrete.data || diaSelecionadoISO);
+
+    lembreteInicio.value = inicioLembreteOriginal;
+    atualizarCampoInicioLembrete();
+
     // Empréstimo (receber) usa a conta do empréstimo original, então não
     // pede conta/categoria. Conta minha (pagar) mostra os dois campos.
     const receber = ehLembreteReceber(lembrete);
@@ -759,6 +826,18 @@ function abrirEdicaoLembrete(lembrete) {
         popularSelectBanco(lembreteBanco, lembrete.banco);
         popularSelectCategoria(lembreteCategoria, lembrete.categoria);
     }
+}
+
+// O botão "Começar só no próximo mês" aparece só no PRIMEIRO vencimento de um
+// lembrete mensal quando ele já passou e não foi pago (conta "atrasada" que
+// na verdade nem deveria existir, ex.: lembrete feito para 15/11 que apareceu
+// em 15/10).
+function podePularPrimeiroMes(lembrete, pago) {
+
+    if (!lembrete.recorrente || pago) return false;
+    if (diaSelecionadoISO >= hojeISO) return false;
+
+    return diaSelecionadoISO === primeiraOcorrenciaMensal(lembrete);
 }
 
 function renderizarLembretesDia() {
@@ -792,6 +871,7 @@ function renderizarLembretesDia() {
                 <button class="btnPagarLembrete${pago ? " desfazer" : ""}" data-id="${lembrete.id}">
                     ${pago ? "Desfazer" : (lembrete.tipoLembrete === "receber" ? "✅ Marcar como recebido" : "✅ Marcar como pago")}
                 </button>
+                ${podePularPrimeiroMes(lembrete, pago) ? `<button class="btnPularMes" data-id="${lembrete.id}">⏭️ Começar só no próximo mês</button>` : ""}
             </div>
         `;
 
@@ -808,6 +888,28 @@ function renderizarLembretesDia() {
 
             await marcarComoPago(lembrete, diaSelecionadoISO);
 
+            atualizarTudo();
+        });
+    });
+
+    listaLembretesDia.querySelectorAll(".btnPularMes").forEach(btn => {
+        btn.addEventListener("click", async () => {
+
+            const lembrete = lembretes.find(l => l.id === Number(btn.dataset.id));
+            if (!lembrete) return;
+
+            const proxima = ocorrenciaDoMesSeguinte(lembrete, diaSelecionadoISO);
+
+            const confirmar = confirm(
+                `Esse lembrete vai começar só em ${formatarDataBrLembrete(proxima)}.\n` +
+                `O vencimento de ${formatarDataBrLembrete(diaSelecionadoISO)} deixa de aparecer como atrasado.`
+            );
+
+            if (!confirmar) return;
+
+            lembrete.dataInicio = proxima;
+
+            await salvarLembretes();
             atualizarTudo();
         });
     });
@@ -863,11 +965,23 @@ btnSalvarLembrete.addEventListener("click", async () => {
     const recorrente = lembreteRecorrente.checked;
     const observacao = lembreteObservacao.value.trim();
 
-    const diaDaSelecao = paraDataLocal(diaSelecionadoISO).getDate();
+    // data em que o lembrete mensal começa a valer (ou a data do lembrete único)
+    const inicioEscolhido = lembreteInicio.value || diaSelecionadoISO;
+    const diaDoInicio = paraDataLocal(inicioEscolhido).getDate();
 
     if (lembreteEditandoId !== null) {
 
         const lembrete = lembretes.find(l => l.id === lembreteEditandoId);
+
+        // lembrete único já pago: mudar a data soltaria o pagamento da data antiga
+        if (
+            lembrete && !recorrente && !lembrete.recorrente &&
+            lembrete.data && inicioEscolhido !== lembrete.data &&
+            lembrete.pagamentos && lembrete.pagamentos[lembrete.data]
+        ) {
+            alert("Esse lembrete já foi pago. Desfaça o pagamento antes de mudar a data.");
+            return;
+        }
 
         if (lembrete) {
             lembrete.titulo = titulo;
@@ -881,11 +995,20 @@ btnSalvarLembrete.addEventListener("click", async () => {
             }
 
             if (recorrente) {
-                lembrete.diaDoMes = lembrete.diaDoMes || diaDaSelecao;
+
+                lembrete.dataInicio = inicioEscolhido;
+
+                // o dia do mês só muda se a pessoa mexeu na data de início
+                if (!lembrete.diaDoMes || inicioEscolhido !== inicioLembreteOriginal) {
+                    lembrete.diaDoMes = diaDoInicio;
+                }
+
                 delete lembrete.data;
+
             } else {
-                lembrete.data = lembrete.data || diaSelecionadoISO;
+                lembrete.data = inicioEscolhido;
                 delete lembrete.diaDoMes;
+                delete lembrete.dataInicio;
             }
         }
 
@@ -903,9 +1026,10 @@ btnSalvarLembrete.addEventListener("click", async () => {
         };
 
         if (recorrente) {
-            novoLembrete.diaDoMes = diaDaSelecao;
+            novoLembrete.diaDoMes = diaDoInicio;
+            novoLembrete.dataInicio = inicioEscolhido;
         } else {
-            novoLembrete.data = diaSelecionadoISO;
+            novoLembrete.data = inicioEscolhido;
         }
 
         lembretes.push(novoLembrete);
