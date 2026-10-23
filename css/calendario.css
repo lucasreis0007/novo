@@ -700,3 +700,22 @@ body{
     display:flex;
     gap:8px;
 }
+
+/* Pular o mês atrasado de um lembrete que acabou de começar */
+
+.btnPularMes{
+    background:#EEF2FF;
+    color:#4F46E5;
+    border:none;
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:bold;
+    white-space:normal;
+    transition:.2s;
+}
+
+.btnPularMes:hover{
+    background:#E0E7FF;
+}
