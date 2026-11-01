@@ -67,7 +67,18 @@
                     <option value="Reserva">🛡️ Reserva (guardar dinheiro)</option>
                     <option value="Investimento">📈 Investimento</option>
                     <option value="Resgate">🏧 Resgate (retirar da reserva)</option>
+                    <option value="Meta">🎯 Meta (aporte em uma meta)</option>
                 </select>
+            </div>
+
+            <div class="campo" id="campoMetaVinculada" style="display:none;">
+                <label>Qual meta?</label>
+                <select id="metaVinculada">
+                    <option value="">Selecione a meta</option>
+                </select>
+                <p class="dica-meta" id="dicaMeta">
+                    Todo lançamento nessa categoria vira um aporte na meta escolhida.
+                </p>
             </div>
 
             <div class="campo">
