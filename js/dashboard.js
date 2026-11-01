@@ -1104,7 +1104,7 @@ notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLem
         // "Retirada da Reserva" não é gasto, e "Empréstimo" precisa de
         // nome e data de quem vai pagar (só na tela completa).
         return lista.filter(c =>
-            c && c.nome && c.natureza !== "Resgate" && !semAcento(c.nome).includes("emprestimo")
+            c && c.nome && c.natureza !== "Resgate" && c.natureza !== "Meta" && !semAcento(c.nome).includes("emprestimo")
         );
     }
 

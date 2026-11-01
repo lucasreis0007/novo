@@ -283,7 +283,7 @@ function categoriasDeSaida() {
 
     const saida = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
 
-    return saida.filter(c => c.natureza !== "Resgate");
+    return saida.filter(c => c.natureza !== "Resgate" && c.natureza !== "Meta");
 }
 
 function naturezaDaCategoria(nome) {

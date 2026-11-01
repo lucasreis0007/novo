@@ -14,6 +14,9 @@ const formCategoria = document.getElementById("formCategoria");
 const nomeInput = document.getElementById("nomeCategoria");
 const campoNatureza = document.getElementById("campoNatureza");
 const naturezaInput = document.getElementById("natureza");
+const campoMetaVinculada = document.getElementById("campoMetaVinculada");
+const metaVinculadaInput = document.getElementById("metaVinculada");
+const dicaMeta = document.getElementById("dicaMeta");
 
 const tituloForm = document.getElementById("tituloForm");
 const tituloLista = document.getElementById("tituloLista");
@@ -82,6 +85,49 @@ function carregarCategorias() {
     return categorias;
 }
 
+function carregarMetas() {
+    return JSON.parse(localStorage.getItem("metas")) || [];
+}
+
+// ---------------- NATUREZA "META" ----------------
+// Categoria com natureza Meta fica ligada a uma meta. Ao lançar uma
+// saída nela (tela Adicionar), o valor vira um aporte na meta.
+
+function popularMetasVinculaveis(metaIdSelecionada) {
+
+    const metas = carregarMetas();
+
+    metaVinculadaInput.innerHTML = '<option value="">Selecione a meta</option>';
+
+    metas.forEach(meta => {
+        const opcao = document.createElement("option");
+        opcao.value = String(meta.id);
+        opcao.textContent = `${meta.emoji || "🎯"} ${meta.nome}`;
+        metaVinculadaInput.appendChild(opcao);
+    });
+
+    if (metaIdSelecionada != null) {
+        metaVinculadaInput.value = String(metaIdSelecionada);
+    }
+
+    dicaMeta.textContent = metas.length === 0
+        ? "Você ainda não tem nenhuma meta. Crie uma na tela Metas primeiro."
+        : "Todo lançamento nessa categoria vira um aporte na meta escolhida.";
+}
+
+function atualizarCampoMeta() {
+
+    const mostrar = tipoAtivo === "saida" && naturezaInput.value === "Meta";
+
+    campoMetaVinculada.style.display = mostrar ? "flex" : "none";
+
+    if (mostrar) {
+        popularMetasVinculaveis(metaVinculadaInput.value || null);
+    }
+}
+
+naturezaInput.addEventListener("change", atualizarCampoMeta);
+
 function salvarCategorias(categorias) {
     localStorage.setItem("categorias", JSON.stringify(categorias));
 }
@@ -138,6 +184,8 @@ function trocarAba(tipo) {
 
     campoNatureza.style.display = tipo === "saida" ? "flex" : "none";
 
+    atualizarCampoMeta();
+
     tituloForm.textContent = tipo === "saida"
         ? "Nova categoria de saída"
         : "Nova categoria de entrada";
@@ -164,10 +212,18 @@ function tagPorNatureza(natureza) {
         Despesa: "tag-despesa",
         Reserva: "tag-reserva",
         Investimento: "tag-investimento",
-        Resgate: "tag-resgate"
+        Resgate: "tag-resgate",
+        Meta: "tag-meta"
     };
 
     return `<span class="tag ${classes[natureza] || "tag-despesa"}">${natureza}</span>`;
+}
+
+function nomeMetaDaCategoria(item) {
+
+    const meta = carregarMetas().find(m => String(m.id) === String(item.metaId));
+
+    return meta ? `→ ${meta.nome}` : "→ (meta removida)";
 }
 
 function renderizarCategorias() {
@@ -199,6 +255,7 @@ function renderizarCategorias() {
             <div class="categoria-nome">
                 <strong>${iconeCategoria(nome, categorias)} ${nome}</strong>
                 ${tipoAtivo === "saida" ? tagPorNatureza(item.natureza) : `<span class="tag tag-entrada">Entrada</span>`}
+                ${tipoAtivo === "saida" && item.natureza === "Meta" ? `<span class="meta-vinculada">${nomeMetaDaCategoria(item)}</span>` : ""}
             </div>
             <div class="categoria-acoes">
                 <button class="categoria-editar" data-index="${index}" title="Editar categoria">
@@ -272,6 +329,8 @@ function editarCategoria(index) {
 
     if (tipoAtivo === "saida") {
         naturezaInput.value = item.natureza;
+        popularMetasVinculaveis(item.metaId);
+        atualizarCampoMeta();
     }
 
     iconeEscolhidoManualmente = true;
@@ -292,6 +351,8 @@ function cancelarEdicao() {
     editandoIndex = null;
 
     formCategoria.reset();
+
+    atualizarCampoMeta();
 
     iconeEscolhidoManualmente = false;
     selecionarIcone("outros");
@@ -329,6 +390,20 @@ formCategoria.addEventListener("submit", (e) => {
 
     if (tipoAtivo === "saida") {
 
+        const ehMeta = naturezaInput.value === "Meta";
+
+        if (ehMeta && !metaVinculadaInput.value) {
+            alert("Escolha a meta que essa categoria vai alimentar.");
+            return;
+        }
+
+        const novaCategoria = { nome, natureza: naturezaInput.value };
+
+        if (ehMeta) {
+            const meta = carregarMetas().find(m => String(m.id) === metaVinculadaInput.value);
+            novaCategoria.metaId = meta ? meta.id : Number(metaVinculadaInput.value);
+        }
+
         const jaExiste = categorias.saida.some(
             (c, i) => c.nome.toLowerCase() === nome.toLowerCase() && i !== editandoIndex
         );
@@ -339,9 +414,9 @@ formCategoria.addEventListener("submit", (e) => {
         }
 
         if (editandoIndex !== null) {
-            categorias.saida[editandoIndex] = { nome, natureza: naturezaInput.value };
+            categorias.saida[editandoIndex] = novaCategoria;
         } else {
-            categorias.saida.push({ nome, natureza: naturezaInput.value });
+            categorias.saida.push(novaCategoria);
         }
 
     } else {

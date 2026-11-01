@@ -645,6 +645,21 @@ formulario.addEventListener("submit", async function (e) {
 
     const categorias = carregarCategorias();
 
+    // Categoria com natureza "Meta": a saída vira um aporte na meta
+    // ligada a ela (mesmo lançamento que o botão "Adicionar" da tela Metas).
+    const categoriaMeta = tipo.value === "Saída"
+        ? categorias.saida.find(c => c.natureza === "Meta" && c.nome === categoria.value)
+        : null;
+
+    const metaDaCategoria = categoriaMeta
+        ? metas.find(m => String(m.id) === String(categoriaMeta.metaId))
+        : null;
+
+    if (categoriaMeta && !metaDaCategoria) {
+        alert(`A meta ligada à categoria "${categoriaMeta.nome}" não existe mais. Edite a categoria e escolha outra meta.`);
+        return;
+    }
+
     // "Retirada da Reserva" aparece nas opções de Entrada, mas continua
     // com natureza "Resgate" (é isso que faz ela descontar da reserva
     // em vez de contar como uma entrada comum).
@@ -657,6 +672,8 @@ formulario.addEventListener("submit", async function (e) {
         // (meta → conta). Mesma natureza das transferências entre contas,
         // que já ficam fora dos totais de receita/despesa.
         natureza = "Transferência";
+    } else if (metaDaCategoria) {
+        natureza = "Meta";
     } else if (ehRendimento) {
         natureza = "Rendimento";
     } else if (categoriaResgate) {
@@ -696,9 +713,15 @@ formulario.addEventListener("submit", async function (e) {
         }
     }
 
+    const metaIdSalvo = metaSelecionada
+        ? metaSelecionada.id
+        : (metaDaCategoria ? metaDaCategoria.id : undefined);
+
     const categoriaSalva = metaSelecionada
         ? `Retirada da meta: ${metaSelecionada.nome}`
-        : ehRendimento ? "Rendimento da Reserva" : categoria.value;
+        : metaDaCategoria
+            ? `Meta: ${metaDaCategoria.nome}`
+            : ehRendimento ? "Rendimento da Reserva" : categoria.value;
     const bancoSalvo = ehRendimento ? "" : banco.value;
 
     const idMovSalva = movimentacaoEditando ? movimentacaoEditando.id : Date.now();
@@ -725,7 +748,7 @@ formulario.addEventListener("submit", async function (e) {
                 natureza,
                 banco: bancoSalvo,
                 categoria: categoriaSalva,
-                metaId: metaSelecionada ? metaSelecionada.id : undefined,
+                metaId: metaIdSalvo,
                 valor,
                 data: document.getElementById("data").value,
                 descricao: document.getElementById("descricao").value
@@ -740,7 +763,7 @@ formulario.addEventListener("submit", async function (e) {
             natureza,
             banco: bancoSalvo,
             categoria: categoriaSalva,
-            metaId: metaSelecionada ? metaSelecionada.id : undefined,
+            metaId: metaIdSalvo,
             valor,
             data: document.getElementById("data").value,
             descricao: document.getElementById("descricao").value
@@ -758,7 +781,13 @@ formulario.addEventListener("submit", async function (e) {
         );
     }
 
-    if (metaSelecionada || (movimentacaoEditando && movimentacaoEditando.metaId)) {
+    if (metaDaCategoria) {
+        metaDaCategoria.valorAtual = arredondar(
+            Number(metaDaCategoria.valorAtual) + valor
+        );
+    }
+
+    if (metaSelecionada || metaDaCategoria || (movimentacaoEditando && movimentacaoEditando.metaId)) {
         await salvarMetas(metas);
     }
 
