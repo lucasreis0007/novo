@@ -244,6 +244,20 @@ input:focus{
 .tag-reserva{ background:#4F46E5; }
 .tag-investimento{ background:#16A34A; }
 .tag-resgate{ background:#D97706; }
+.tag-meta{ background:#0D9488; }
+
+.meta-vinculada{
+    margin-left:6px;
+    font-size:12px;
+    color:#0D9488;
+    font-weight:600;
+}
+
+.dica-meta{
+    margin-top:6px;
+    font-size:12px;
+    color:#6B7280;
+}
 .tag-entrada{ background:#16A34A; }
 
 .categoria-acoes{
