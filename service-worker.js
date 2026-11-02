@@ -1,4 +1,4 @@
-const CACHE_NOME = "financas-cache-v43";
+const CACHE_NOME = "financas-cache-v44";
 
 const ARQUIVOS_PARA_CACHE = [
     "./",
@@ -27,6 +27,11 @@ const ARQUIVOS_PARA_CACHE = [
     "./pages/metas.html",
     "./css/metas.css",
     "./js/metas.js",
+
+    "./pages/emprestimos.html",
+    "./css/emprestimos.css",
+    "./js/emprestimos.js",
+    "./js/emprestimos-core.js",
 
     "./pages/controles.html",
     "./css/controles.css",
