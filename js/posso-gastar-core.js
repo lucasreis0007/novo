@@ -100,7 +100,7 @@ export function calcularSaldoDisponivel(movimentacoes) {
             return;
         }
 
-        if (["Despesa", "Reserva", "Investimento", "Meta"].includes(mov.natureza)) {
+        if (["Despesa", "Reserva", "Investimento", "Meta", "Empréstimo", "DevolucaoEmprestimo"].includes(mov.natureza)) {
             saldo -= valor;
         }
     });

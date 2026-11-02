@@ -13,6 +13,7 @@
         { arquivo: "calendario.html", icone: "🗓️", nome: "Calendário" },
         { arquivo: "historico.html", icone: "📜", nome: "Histórico" },
         { arquivo: "metas.html", icone: "🎯", nome: "Metas" },
+        { arquivo: "emprestimos.html", icone: "🤝", nome: "Empréstimos" },
         { arquivo: "controles.html", icone: "🎛️", nome: "Controles" },
         { arquivo: "bancos.html", icone: "🏦", nome: "Bancos" },
         { arquivo: "categorias.html", icone: "🏷️", nome: "Categorias" },

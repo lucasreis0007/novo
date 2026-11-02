@@ -1,4 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, idIconeCategoria, ICONES_DISPONIVEIS, renderizarIcone } from "./utils.js";
+import { garantirCategoriaEmprestimo } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -79,6 +80,11 @@ function carregarCategorias() {
 
     if (!temRetirada) {
         categorias.saida.push({ nome: "Retirada da Reserva", natureza: "Resgate" });
+        localStorage.setItem("categorias", JSON.stringify(categorias));
+    }
+
+    // Categoria de empréstimo: converte as antigas e garante uma padrão.
+    if (garantirCategoriaEmprestimo(categorias)) {
         localStorage.setItem("categorias", JSON.stringify(categorias));
     }
 
@@ -213,7 +219,8 @@ function tagPorNatureza(natureza) {
         Reserva: "tag-reserva",
         Investimento: "tag-investimento",
         Resgate: "tag-resgate",
-        Meta: "tag-meta"
+        Meta: "tag-meta",
+        "Empréstimo": "tag-emprestimo"
     };
 
     return `<span class="tag ${classes[natureza] || "tag-despesa"}">${natureza}</span>`;

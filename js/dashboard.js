@@ -1,4 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, iconeCategoriaTexto, ocorrenciaMensalValida } from "./utils.js";
+import { ehMovEmprestimo, totaisEmprestimos, NATUREZA_PERDAO, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -59,7 +60,33 @@ function atualizarResumo(inicio, fim) {
     let reservas = 0;
     let investimentos = 0;
 
+    // Empréstimos: o que você emprestou (a receber) menos o que você deve
+    // (a pagar). Entra no patrimônio, mas fora de entradas e despesas.
+    let emprestimosLiquido = 0;
+
     lista.forEach((mov) => {
+
+        // Empréstimo e devolução mexem no saldo das contas, mas não são
+        // receita nem gasto. O que sai da conta vira "a receber"; o que
+        // entra por empréstimo vira "a pagar" (o patrimônio não muda).
+        // Perdão: o que faltava receber vira perda (despesa).
+        if (ehMovEmprestimo(mov)) {
+
+            const valorMov = Number(mov.valor);
+
+            if (mov.natureza === NATUREZA_PERDAO) {
+                despesas += valorMov;
+                emprestimosLiquido -= valorMov;
+                return;
+            }
+
+            const delta = mov.tipo === "Entrada" ? valorMov : -valorMov;
+
+            saldoDisponivel += delta;
+            emprestimosLiquido -= delta;
+
+            return;
+        }
 
         // Transferência entre contas próprias: dinheiro sai de um banco e
         // entra em outro, mas não é receita nem despesa de verdade, então
@@ -156,7 +183,13 @@ function atualizarResumo(inicio, fim) {
             .reduce((soma, meta) => soma + Number(meta.valorAtual || 0), 0);
 
     patrimonioTotal =
-        saldoDisponivel + reservas + investimentos + totalMetas;
+        saldoDisponivel + reservas + investimentos + totalMetas + emprestimosLiquido;
+
+    // Cards "A receber" / "A pagar": situação de hoje, sem o filtro de período.
+    const totaisEmp = totaisEmprestimos(movimentacoes);
+
+    document.getElementById("totalAReceber").textContent = moeda(totaisEmp.aReceber);
+    document.getElementById("totalAPagar").textContent = moeda(totaisEmp.aPagar);
 
     document.getElementById("rotuloPatrimonio").textContent =
         filtrando ? "💎 Variação do patrimônio no período" : "💎 Patrimônio Total";
@@ -409,6 +442,20 @@ function renderizarUltimasMovimentacoes() {
             textoNatureza = mov.metaId
                 ? "Retirada da meta"
                 : (mov.tipo === "Entrada" ? "Transferência recebida" : "Transferência enviada");
+        } else if (mov.natureza === NATUREZA_EMPRESTIMO) {
+            classe = "emprestimo-cor";
+            sinal = "🤝";
+            textoNatureza = mov.direcao === "recebido" || mov.tipo === "Entrada"
+                ? "Empréstimo recebido"
+                : "Empréstimo concedido";
+        } else if (mov.natureza === NATUREZA_DEVOLUCAO) {
+            classe = "emprestimo-cor";
+            sinal = "💵";
+            textoNatureza = mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo";
+        } else if (mov.natureza === NATUREZA_PERDAO) {
+            classe = "despesa";
+            sinal = "🙏";
+            textoNatureza = "Empréstimo perdoado";
         } else if (mov.natureza === "RendimentoMeta") {
             classe = "meta-aporte-cor";
             sinal = "🌱";
@@ -1104,7 +1151,7 @@ notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLem
         // "Retirada da Reserva" não é gasto, e "Empréstimo" precisa de
         // nome e data de quem vai pagar (só na tela completa).
         return lista.filter(c =>
-            c && c.nome && c.natureza !== "Resgate" && c.natureza !== "Meta" && !semAcento(c.nome).includes("emprestimo")
+            c && c.nome && c.natureza !== "Resgate" && c.natureza !== "Meta" && c.natureza !== "Empréstimo" && !semAcento(c.nome).includes("emprestimo")
         );
     }
 

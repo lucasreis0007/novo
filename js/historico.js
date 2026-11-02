@@ -1,4 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto, iconeMovimentacao } from "./utils.js";
+import { idsParaExcluir, sincronizarLembretesEmprestimo, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -255,6 +256,44 @@ function carregarMovimentacoes(){
 
         }
 
+        else if(mov.natureza===NATUREZA_EMPRESTIMO){
+
+            classe="emprestimo";
+
+            sinal="🤝";
+
+            textoNatureza = mov.tipo==="Entrada"
+                ? "Empréstimo recebido"
+                : "Empréstimo concedido";
+
+            if(mov.pessoa){
+                textoNatureza += ` · ${mov.pessoa}`;
+            }
+
+        }
+
+        else if(mov.natureza===NATUREZA_DEVOLUCAO){
+
+            classe="emprestimo";
+
+            sinal="💵";
+
+            textoNatureza = mov.tipo==="Entrada"
+                ? "Devolução recebida"
+                : "Pagamento de empréstimo";
+
+        }
+
+        else if(mov.natureza===NATUREZA_PERDAO){
+
+            classe="despesa";
+
+            sinal="🙏";
+
+            textoNatureza="Empréstimo perdoado (perda)";
+
+        }
+
         else if(mov.natureza==="Resgate"){
 
             classe="entrada";
@@ -378,9 +417,19 @@ function carregarMovimentacoes(){
             // Excluir uma retirada de meta devolve o valor para a meta.
             const movExcluida = movimentacoes.find(mov => mov.id === id);
 
+            // Excluir um empréstimo leva junto as devoluções e perdões dele.
+            const idsExcluir = idsParaExcluir(movExcluida, movimentacoes).map(String);
+
+            if(idsExcluir.length > 1){
+
+                const ligados = idsExcluir.length - 1;
+
+                if(!confirm(`Esse empréstimo tem ${ligados} devolução(ões)/perdão registrado(s). Eles também serão excluídos. Continuar?`)) return;
+            }
+
             const resultadoMeta = await devolverValorParaMeta(movExcluida);
 
-            movimentacoes = movimentacoes.filter(mov => mov.id !== id);
+            movimentacoes = movimentacoes.filter(mov => !idsExcluir.includes(String(mov.id)));
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
 
@@ -401,8 +450,11 @@ function carregarMovimentacoes(){
                 }
             }
 
-            if (lembretesMudaram) {
-                await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
+            // empréstimo: o lembrete acompanha o saldo em aberto
+            const lembretesFinais = sincronizarLembretesEmprestimo(movimentacoes, lembretesRestantes);
+
+            if (lembretesMudaram || JSON.stringify(lembretesFinais) !== JSON.stringify(lembretesRestantes)) {
+                await localStorage.setItem("lembretes", JSON.stringify(lembretesFinais));
             }
 
             carregarMovimentacoes();

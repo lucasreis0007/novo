@@ -1,4 +1,18 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoriaTexto } from "./utils.js";
+import {
+    garantirCategoriaEmprestimo,
+    listarEmprestimos,
+    acharEmprestimo,
+    ehMovEmprestimo,
+    categoriaDoEmprestimo,
+    categoriaDaDevolucao,
+    idsParaExcluir,
+    sincronizarLembretesEmprestimo,
+    formatarMoeda as moedaEmprestimo,
+    NATUREZA_EMPRESTIMO,
+    NATUREZA_DEVOLUCAO,
+    NATUREZA_PERDAO
+} from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -134,6 +148,11 @@ function carregarCategorias() {
         localStorage.setItem("categorias", JSON.stringify(categorias));
     }
 
+    // Categoria de empréstimo: converte as antigas e garante uma padrão.
+    if (garantirCategoriaEmprestimo(categorias)) {
+        localStorage.setItem("categorias", JSON.stringify(categorias));
+    }
+
     return categorias;
 }
 
@@ -201,21 +220,58 @@ btnRendimento.addEventListener("click", () => {
 
 const PREFIXO_META = "meta:";
 
-// ---------------- EMPRÉSTIMO (lembrete de quem deve pagar) ----------------
-// Despesa na categoria "Empréstimo": você emprestou dinheiro pra alguém.
-// Pedimos quem vai pagar e quando, e criamos um lembrete (o mesmo do
-// Calendário/Dashboard, que não mexe no saldo) ligado a esse lançamento.
+// ---------------- EMPRÉSTIMO ----------------
+// Dois jeitos de começar um empréstimo:
+//  - Saída numa categoria de natureza "Empréstimo": você emprestou para alguém;
+//  - Entrada em "Peguei emprestado": alguém emprestou para você.
+// Nos dois pedimos a pessoa e a data prevista de pagamento, e criamos um
+// lembrete (Calendário/Dashboard) que acompanha o saldo em aberto.
+// Para devolver (parte do) valor, escolha "Devolução de ..." (Entrada) ou
+// "Pagar empréstimo ..." (Saída) na lista de categorias.
+
+const PREFIXO_DEVOLUCAO = "emp:dev:";
+const VALOR_NOVO_RECEBIDO = "emp:novo";
 
 const campoEmprestimo = document.getElementById("campoEmprestimo");
 const devedorInput = document.getElementById("devedor");
 const dataPagamentoEmprestimo = document.getElementById("dataPagamentoEmprestimo");
+const rotuloDevedor = document.getElementById("rotuloDevedor");
+const rotuloDataEmprestimo = document.getElementById("rotuloDataEmprestimo");
+const avisoEmprestimo = document.getElementById("avisoEmprestimo");
+const avisoDevolucao = document.getElementById("avisoDevolucao");
 
-function ehCategoriaEmprestimo(nome) {
-    return (nome || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .includes("emprestimo");
+function movimentacoesAtuais() {
+    return JSON.parse(localStorage.getItem("movimentacoes")) || [];
+}
+
+function categoriaEhEmprestimo(nome) {
+    return carregarCategorias().saida.some(
+        c => c.natureza === NATUREZA_EMPRESTIMO && c.nome === nome
+    );
+}
+
+// "dado" (emprestei), "recebido" (peguei emprestado) ou null
+function direcaoNovoEmprestimo() {
+
+    if (tipo.value === "Saída" && categoriaEhEmprestimo(categoria.value)) return "dado";
+    if (tipo.value === "Entrada" && categoria.value === VALOR_NOVO_RECEBIDO) return "recebido";
+
+    return null;
+}
+
+function emprestimoAtivo() {
+    return direcaoNovoEmprestimo() !== null;
+}
+
+// Empréstimo em aberto escolhido para devolver/pagar (ou null)
+function devolucaoSelecionada() {
+
+    if (!categoria.value.startsWith(PREFIXO_DEVOLUCAO)) return null;
+
+    return acharEmprestimo(
+        movimentacoesAtuais(),
+        categoria.value.slice(PREFIXO_DEVOLUCAO.length)
+    );
 }
 
 function carregarLembretes() {
@@ -233,23 +289,51 @@ function somarDiasISO(dataISO, dias) {
     return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
 }
 
-function emprestimoAtivo() {
-    return tipo.value === "Saída" && ehCategoriaEmprestimo(categoria.value);
+function textosDoCampoEmprestimo(direcao) {
+
+    const dado = direcao === "dado";
+
+    rotuloDevedor.textContent = dado ? "Quem vai te pagar?" : "De quem você pegou emprestado?";
+    rotuloDataEmprestimo.textContent = dado ? "Quando ele vai pagar?" : "Quando você vai pagar?";
+    avisoEmprestimo.textContent = dado
+        ? "🔔 Vai aparecer um lembrete no Calendário e no Dashboard para você cobrar."
+        : "🔔 Vai aparecer um lembrete no Calendário e no Dashboard para você pagar.";
 }
 
 function atualizarCampoEmprestimo() {
 
-    const ativo = emprestimoAtivo();
+    const direcao = direcaoNovoEmprestimo();
+    const ativo = direcao !== null;
 
     campoEmprestimo.style.display = ativo ? "flex" : "none";
 
     devedorInput.required = ativo;
     dataPagamentoEmprestimo.required = ativo;
 
+    if (ativo) {
+        textosDoCampoEmprestimo(direcao);
+    }
+
     // sugestão: 30 dias depois da data do lançamento
     if (ativo && !dataPagamentoEmprestimo.value) {
         dataPagamentoEmprestimo.value = somarDiasISO(document.getElementById("data").value, 30);
     }
+
+    atualizarAvisoDevolucao();
+}
+
+function atualizarAvisoDevolucao() {
+
+    const emprestimo = devolucaoSelecionada();
+
+    if (!emprestimo) {
+        avisoDevolucao.style.display = "none";
+        return;
+    }
+
+    avisoDevolucao.style.display = "block";
+    avisoDevolucao.textContent =
+        `Valor original ${moedaEmprestimo(emprestimo.valor)} · já devolvido ${moedaEmprestimo(emprestimo.devolvido)} · falta ${moedaEmprestimo(emprestimo.saldo)}. Pode ser pagamento parcial.`;
 }
 
 categoria.addEventListener("change", atualizarCampoEmprestimo);
@@ -316,6 +400,55 @@ function atualizarCategorias() {
         }
     }
 
+    // Empréstimos: peguei emprestado / devoluções recebidas (Entrada) e
+    // pagamentos do que eu devo (Saída).
+    const emprestimosAbertos = listarEmprestimos(movimentacoesAtuais()).filter(e => e.saldo > 0);
+
+    const criarOpcaoEmprestimo = (valor, texto) => {
+        const opcao = document.createElement("option");
+        opcao.value = valor;
+        opcao.textContent = texto;
+        return opcao;
+    };
+
+    if (tipo.value === "Entrada") {
+
+        const grupo = document.createElement("optgroup");
+        grupo.label = "Empréstimos";
+
+        grupo.appendChild(criarOpcaoEmprestimo(VALOR_NOVO_RECEBIDO, "🤝 Peguei emprestado"));
+
+        emprestimosAbertos
+            .filter(e => e.direcao === "dado")
+            .forEach(e => {
+                grupo.appendChild(criarOpcaoEmprestimo(
+                    PREFIXO_DEVOLUCAO + e.id,
+                    `💵 Devolução de ${e.pessoa} (falta ${moedaEmprestimo(e.saldo)})`
+                ));
+            });
+
+        categoria.appendChild(grupo);
+
+    } else if (tipo.value === "Saída") {
+
+        const aPagar = emprestimosAbertos.filter(e => e.direcao === "recebido");
+
+        if (aPagar.length > 0) {
+
+            const grupo = document.createElement("optgroup");
+            grupo.label = "Pagar empréstimo";
+
+            aPagar.forEach(e => {
+                grupo.appendChild(criarOpcaoEmprestimo(
+                    PREFIXO_DEVOLUCAO + e.id,
+                    `💸 Pagar ${e.pessoa} (falta ${moedaEmprestimo(e.saldo)})`
+                ));
+            });
+
+            categoria.appendChild(grupo);
+        }
+    }
+
     atualizarCampoEmprestimo();
 }
 
@@ -370,6 +503,7 @@ if (idEdicao === null && dataPreSelecionada) {
 
 let movimentacaoEditando = null;
 let editandoAporteMeta = false;
+let editandoEmprestimo = false;
 
 const btnExcluirMov = document.getElementById("btnExcluirMov");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -388,6 +522,12 @@ if (idEdicao !== null) {
     editandoAporteMeta = Boolean(
         movimentacaoEditando &&
         ["Meta", "RendimentoMeta"].includes(movimentacaoEditando.natureza)
+    );
+
+    // Empréstimo, devolução ou perdão: tela simplificada (o tipo e a
+    // pessoa/empréstimo ligados não mudam aqui).
+    editandoEmprestimo = Boolean(
+        movimentacaoEditando && ehMovEmprestimo(movimentacaoEditando)
     );
 
     if (movimentacaoEditando) {
@@ -421,6 +561,46 @@ if (idEdicao !== null) {
                 atualizarSaldoBanco();
             }
 
+        } else if (editandoEmprestimo) {
+
+            const natu = movimentacaoEditando.natureza;
+            const dado = movimentacaoEditando.direcao
+                ? movimentacaoEditando.direcao === "dado"
+                : movimentacaoEditando.tipo === "Saída";
+
+            const rotulo = natu === NATUREZA_EMPRESTIMO
+                ? (dado ? "empréstimo que fiz" : "empréstimo que peguei")
+                : natu === NATUREZA_DEVOLUCAO ? "devolução" : "perdão";
+
+            document.getElementById("tituloAba").textContent = `Editar ${rotulo}`;
+            document.getElementById("tituloTela").textContent = `Editar ${rotulo}`;
+            document.getElementById("subtituloTela").textContent = movimentacaoEditando.categoria || "";
+
+            btnEntrada.closest(".campo").style.display = "none";
+            campoCategoria.style.display = "none";
+            categoria.required = false;
+
+            if (natu === NATUREZA_PERDAO) {
+                // perdão não mexe em nenhuma conta
+                campoBanco.style.display = "none";
+                banco.required = false;
+            } else {
+                popularBancos();
+                banco.value = movimentacaoEditando.banco;
+                atualizarSaldoBanco();
+            }
+
+            if (natu === NATUREZA_EMPRESTIMO) {
+
+                campoEmprestimo.style.display = "flex";
+                devedorInput.required = true;
+                dataPagamentoEmprestimo.required = true;
+                textosDoCampoEmprestimo(dado ? "dado" : "recebido");
+
+                devedorInput.value = movimentacaoEditando.pessoa || "";
+                dataPagamentoEmprestimo.value = movimentacaoEditando.dataPrevista || "";
+            }
+
         } else if (movimentacaoEditando.natureza === "Resgate") {
             btnEntrada.click();
         } else if (movimentacaoEditando.tipo === "Entrada") {
@@ -431,13 +611,13 @@ if (idEdicao !== null) {
             btnSaida.click();
         }
 
-        if (!editandoAporteMeta) {
+        if (!editandoAporteMeta && !editandoEmprestimo) {
             popularBancos();
             banco.value = movimentacaoEditando.banco;
             atualizarSaldoBanco();
         }
 
-        if (!editandoAporteMeta && movimentacaoEditando.tipo !== "Rendimento") {
+        if (!editandoAporteMeta && !editandoEmprestimo && movimentacaoEditando.tipo !== "Rendimento") {
             atualizarCategorias();
             categoria.value = movimentacaoEditando.metaId
                 ? PREFIXO_META + movimentacaoEditando.metaId
@@ -487,8 +667,18 @@ btnExcluirMov.addEventListener("click", async () => {
     let movimentacoes =
         JSON.parse(localStorage.getItem("movimentacoes")) || [];
 
+    // Excluir um empréstimo leva junto as devoluções e perdões dele.
+    const idsExcluir = idsParaExcluir(movimentacaoEditando, movimentacoes).map(String);
+
+    if (idsExcluir.length > 1) {
+
+        const ligados = idsExcluir.length - 1;
+
+        if (!confirm(`Esse empréstimo tem ${ligados} devolução(ões)/perdão registrado(s). Eles também serão excluídos. Continuar?`)) return;
+    }
+
     movimentacoes = movimentacoes.filter(
-        mov => String(mov.id) !== String(idEdicao)
+        mov => !idsExcluir.includes(String(mov.id))
     );
 
     // espera o Firestore confirmar antes de trocar de página, senão a
@@ -514,8 +704,12 @@ btnExcluirMov.addEventListener("click", async () => {
         }
     }
 
-    if (lembretesMudaram) {
-        await localStorage.setItem("lembretes", JSON.stringify(lembretesRestantes));
+    // empréstimo: o lembrete acompanha o saldo (reabre se uma devolução
+    // foi excluída, some se o empréstimo foi excluído)
+    const lembretesFinais = sincronizarLembretesEmprestimo(movimentacoes, lembretesRestantes);
+
+    if (lembretesMudaram || JSON.stringify(lembretesFinais) !== JSON.stringify(lembretesRestantes)) {
+        await localStorage.setItem("lembretes", JSON.stringify(lembretesFinais));
     }
 
     window.location.href = "historico.html";
@@ -591,6 +785,194 @@ async function salvarEdicaoAporteMeta() {
     window.location.href = "historico.html";
 }
 
+// Edição de empréstimo, devolução ou perdão: muda valor, data, descrição
+// e (quando existem) conta, pessoa e data prevista. O saldo é recalculado
+// a partir dos lançamentos, então só validamos os limites.
+async function salvarEdicaoEmprestimo() {
+
+    const mov = movimentacaoEditando;
+
+    const valor = Number(document.getElementById("valor").value);
+    const data = document.getElementById("data").value;
+    const descricao = document.getElementById("descricao").value;
+
+    if (!valor || valor <= 0) {
+        alert("Digite um valor válido.");
+        return;
+    }
+
+    if (mov.natureza !== NATUREZA_PERDAO && !banco.value) {
+        alert("Escolha a conta.");
+        return;
+    }
+
+    const movimentacoes = movimentacoesAtuais();
+
+    const emprestimo = acharEmprestimo(movimentacoes, mov.emprestimoId);
+
+    const alteracoes = {
+        valor,
+        data,
+        descricao,
+        banco: mov.natureza === NATUREZA_PERDAO ? "" : banco.value
+    };
+
+    if (mov.natureza === NATUREZA_EMPRESTIMO) {
+
+        const pessoa = devedorInput.value.trim();
+
+        if (!pessoa) {
+            alert("Diga o nome da pessoa.");
+            return;
+        }
+
+        const jaAbatido = emprestimo ? emprestimo.devolvido + emprestimo.perdoado : 0;
+
+        if (valor < jaAbatido - 0.004) {
+            alert(`Esse empréstimo já teve ${moedaEmprestimo(jaAbatido)} devolvido ou perdoado. O valor não pode ser menor que isso.`);
+            return;
+        }
+
+        const direcao = emprestimo ? emprestimo.direcao : (mov.tipo === "Saída" ? "dado" : "recebido");
+
+        alteracoes.pessoa = pessoa;
+        alteracoes.dataPrevista = dataPagamentoEmprestimo.value;
+        alteracoes.categoria = categoriaDoEmprestimo(direcao, pessoa);
+
+        // devoluções e perdões carregam o nome da pessoa na categoria
+        movimentacoes.forEach(m => {
+            if (m.emprestimoId == null || String(m.emprestimoId) !== String(mov.emprestimoId)) return;
+            if (m.natureza === NATUREZA_DEVOLUCAO) m.categoria = categoriaDaDevolucao(direcao, pessoa);
+            if (m.natureza === NATUREZA_PERDAO) m.categoria = `Perdão de empréstimo: ${pessoa}`;
+        });
+
+    } else {
+
+        const maximo = emprestimo ? emprestimo.saldo + Number(mov.valor) : valor;
+
+        if (valor > maximo + 0.004) {
+            alert(`O valor passa do que falta no empréstimo. O máximo é ${moedaEmprestimo(maximo)}.`);
+            return;
+        }
+    }
+
+    const indice = movimentacoes.findIndex(m => String(m.id) === String(idEdicao));
+
+    if (indice === -1) return;
+
+    movimentacoes[indice] = { ...movimentacoes[indice], ...alteracoes };
+
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+
+    await localStorage.setItem(
+        "lembretes",
+        JSON.stringify(sincronizarLembretesEmprestimo(movimentacoes, carregarLembretes()))
+    );
+
+    window.location.href = "historico.html";
+}
+
+// Novo empréstimo (emprestei / peguei emprestado) ou devolução de um
+// empréstimo em aberto. Se estava editando um lançamento comum, ele é
+// substituído por este.
+async function salvarFluxoEmprestimo(direcaoNovo, devolucao) {
+
+    const valor = Number(document.getElementById("valor").value);
+    const data = document.getElementById("data").value;
+    const descricao = document.getElementById("descricao").value;
+
+    if (!valor || valor <= 0) {
+        alert("Digite um valor válido.");
+        return;
+    }
+
+    if (!banco.value) {
+        alert("Escolha a conta.");
+        return;
+    }
+
+    if (movimentacaoEditando && movimentacaoEditando.metaId) {
+        alert("Uma retirada de meta não pode virar empréstimo. Exclua e lance de novo.");
+        return;
+    }
+
+    const id = movimentacaoEditando ? movimentacaoEditando.id : Date.now();
+
+    let nova;
+
+    if (direcaoNovo) {
+
+        const pessoa = devedorInput.value.trim();
+
+        if (!pessoa) {
+            alert(direcaoNovo === "dado" ? "Diga quem vai te pagar." : "Diga de quem você pegou emprestado.");
+            return;
+        }
+
+        nova = {
+            id,
+            tipo: direcaoNovo === "dado" ? "Saída" : "Entrada",
+            natureza: NATUREZA_EMPRESTIMO,
+            emprestimoId: id,
+            direcao: direcaoNovo,
+            pessoa,
+            dataPrevista: dataPagamentoEmprestimo.value,
+            banco: banco.value,
+            categoria: categoriaDoEmprestimo(direcaoNovo, pessoa),
+            valor,
+            data,
+            descricao
+        };
+
+    } else {
+
+        if (valor > devolucao.saldo + 0.004) {
+            alert(`O valor é maior que o que falta (${moedaEmprestimo(devolucao.saldo)}).`);
+            return;
+        }
+
+        nova = {
+            id,
+            tipo: devolucao.direcao === "dado" ? "Entrada" : "Saída",
+            natureza: NATUREZA_DEVOLUCAO,
+            emprestimoId: devolucao.id,
+            banco: banco.value,
+            categoria: categoriaDaDevolucao(devolucao.direcao, devolucao.pessoa),
+            valor,
+            data,
+            descricao
+        };
+    }
+
+    const movimentacoes = movimentacoesAtuais();
+
+    if (movimentacaoEditando) {
+
+        const indice = movimentacoes.findIndex(m => String(m.id) === String(idEdicao));
+
+        if (indice !== -1) movimentacoes[indice] = nova;
+        else movimentacoes.push(nova);
+
+    } else {
+        movimentacoes.push(nova);
+    }
+
+    await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
+
+    await localStorage.setItem(
+        "lembretes",
+        JSON.stringify(sincronizarLembretesEmprestimo(movimentacoes, carregarLembretes()))
+    );
+
+    if (movimentacaoEditando) {
+        window.location.href = "historico.html";
+    } else if (origem === "calendario") {
+        window.location.href = `calendario.html?data=${data}`;
+    } else {
+        window.location.href = "dashboard.html";
+    }
+}
+
 formulario.addEventListener("submit", async function (e) {
 
     e.preventDefault();
@@ -600,10 +982,24 @@ formulario.addEventListener("submit", async function (e) {
         return;
     }
 
+    if (editandoEmprestimo) {
+        await salvarEdicaoEmprestimo();
+        return;
+    }
+
     const ehRendimento = tipo.value === "Rendimento";
 
     if (!ehRendimento && categoria.value === "") {
         alert("Selecione uma categoria.");
+        return;
+    }
+
+    // Empréstimo novo ou devolução: fluxo próprio
+    const direcaoEmprestimoNovo = direcaoNovoEmprestimo();
+    const emprestimoDevolvido = devolucaoSelecionada();
+
+    if (direcaoEmprestimoNovo || emprestimoDevolvido) {
+        await salvarFluxoEmprestimo(direcaoEmprestimoNovo, emprestimoDevolvido);
         return;
     }
 

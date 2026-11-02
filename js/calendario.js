@@ -1,4 +1,15 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, ocorrenciaMensalValida, primeiraOcorrenciaMensal } from "./utils.js";
+import {
+    acharEmprestimo,
+    categoriaDaDevolucao,
+    idsParaExcluir,
+    sincronizarLembretesEmprestimo,
+    ehMovEmprestimoNeutro,
+    ehPerdaEmprestimo,
+    NATUREZA_EMPRESTIMO,
+    NATUREZA_DEVOLUCAO,
+    NATUREZA_PERDAO
+} from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -177,6 +188,26 @@ function classificarMovimentacao(mov) {
         return { classe: "reserva", sinal: "🎯", texto: "Aporte na meta" };
     }
 
+    if (mov.natureza === NATUREZA_EMPRESTIMO) {
+        return {
+            classe: "emprestimo",
+            sinal: "🤝",
+            texto: mov.tipo === "Entrada" ? "Empréstimo recebido" : "Empréstimo concedido"
+        };
+    }
+
+    if (mov.natureza === NATUREZA_DEVOLUCAO) {
+        return {
+            classe: "emprestimo",
+            sinal: "💵",
+            texto: mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo"
+        };
+    }
+
+    if (mov.natureza === NATUREZA_PERDAO) {
+        return { classe: "despesa", sinal: "🙏", texto: "Empréstimo perdoado (perda)" };
+    }
+
     if (mov.natureza === "Resgate") {
         return { classe: "entrada", sinal: "🏧", texto: "Retirada da Reserva" };
     }
@@ -283,7 +314,7 @@ function categoriasDeSaida() {
 
     const saida = Array.isArray(categoriasSalvas.saida) ? categoriasSalvas.saida : [];
 
-    return saida.filter(c => c.natureza !== "Resgate" && c.natureza !== "Meta");
+    return saida.filter(c => c.natureza !== "Resgate" && c.natureza !== "Meta" && c.natureza !== "Empréstimo");
 }
 
 function naturezaDaCategoria(nome) {
@@ -323,11 +354,11 @@ function popularSelectCategoria(select, valorAtual) {
 
 // Pergunta só o que ficou faltando (valor, conta e/ou categoria) —
 // acontece com lembretes criados antes dessa função existir.
-function pedirDadosPagamento({ titulo, receber, valor, banco, categoria }) {
+function pedirDadosPagamento({ titulo, receber, valor, banco, categoria, editarValor = false, bancoPadrao = "" }) {
 
     return new Promise(resolve => {
 
-        const precisaValor = !(Number(valor) > 0);
+        const precisaValor = editarValor || !(Number(valor) > 0);
         const precisaBanco = !banco;
         const precisaCategoria = !receber && !categoria;
 
@@ -337,12 +368,12 @@ function pedirDadosPagamento({ titulo, receber, valor, banco, categoria }) {
         fundo.innerHTML = `
             <div class="modalPagamento">
                 <h3>${receber ? "Receber" : "Pagar"}: ${titulo}</h3>
-                <p>Preencha o que falta para lançar na sua conta.</p>
+                <p>${editarValor ? "Pode pagar só uma parte: o que sobrar continua em aberto." : "Preencha o que falta para lançar na sua conta."}</p>
 
                 ${precisaValor ? `
                     <div class="campoLembrete">
                         <label>Valor</label>
-                        <input type="number" id="pagValor" step="0.01" min="0.01" placeholder="0,00">
+                        <input type="number" id="pagValor" step="0.01" min="0.01" placeholder="0,00" value="${editarValor ? Number(valor) : ""}">
                     </div>` : ""}
 
                 ${precisaBanco ? `
@@ -370,7 +401,7 @@ function pedirDadosPagamento({ titulo, receber, valor, banco, categoria }) {
         const selCategoria = fundo.querySelector("#pagCategoria");
         const inputValor = fundo.querySelector("#pagValor");
 
-        if (selBanco) popularSelectBanco(selBanco, "");
+        if (selBanco) popularSelectBanco(selBanco, bancoPadrao);
         if (selCategoria) popularSelectCategoria(selCategoria, "");
 
         const fechar = resultado => {
@@ -395,7 +426,61 @@ function pedirDadosPagamento({ titulo, receber, valor, banco, categoria }) {
     });
 }
 
+// Lembrete de empréstimo: registra uma devolução (total ou parcial) no
+// empréstimo, e o lembrete se atualiza sozinho com o que ainda falta.
+async function registrarDevolucaoPeloLembrete(lembrete) {
+
+    const emprestimo = acharEmprestimo(movimentacoes, lembrete.emprestimoId);
+
+    if (!emprestimo || emprestimo.saldo <= 0) {
+        lembretes = sincronizarLembretesEmprestimo(movimentacoes, lembretes);
+        await salvarLembretes();
+        return;
+    }
+
+    const receber = emprestimo.direcao === "dado";
+
+    const resposta = await pedirDadosPagamento({
+        titulo: lembrete.titulo,
+        receber,
+        valor: emprestimo.saldo,
+        banco: "",
+        categoria: "Empréstimo",
+        editarValor: true,
+        bancoPadrao: emprestimo.banco
+    });
+
+    if (!resposta) return;
+
+    if (resposta.valor > emprestimo.saldo + 0.004) {
+        alert(`O valor é maior que o que falta (${formatarMoeda(emprestimo.saldo)}).`);
+        return;
+    }
+
+    movimentacoes.push({
+        id: Date.now(),
+        tipo: receber ? "Entrada" : "Saída",
+        natureza: NATUREZA_DEVOLUCAO,
+        emprestimoId: emprestimo.id,
+        banco: resposta.banco,
+        categoria: categoriaDaDevolucao(emprestimo.direcao, emprestimo.pessoa),
+        valor: resposta.valor,
+        data: hojeISO,
+        descricao: lembrete.titulo
+    });
+
+    await salvarMovimentacoes();
+
+    lembretes = sincronizarLembretesEmprestimo(movimentacoes, lembretes);
+    await salvarLembretes();
+}
+
 async function marcarComoPago(lembrete, dataISO) {
+
+    if (lembrete.emprestimoId != null) {
+        await registrarDevolucaoPeloLembrete(lembrete);
+        return;
+    }
 
     lembrete.pagamentos = lembrete.pagamentos || {};
 
@@ -588,6 +673,15 @@ function calcularResumoMes() {
             // Retirada de meta só muda o dinheiro de lugar, não é receita.
             if (mov.metaId) return;
 
+            // Empréstimo e devolução também só mudam o dinheiro de lugar;
+            // o perdão é perda e conta como saída.
+            if (ehMovEmprestimoNeutro(mov)) return;
+
+            if (ehPerdaEmprestimo(mov)) {
+                saidas += Number(mov.valor);
+                return;
+            }
+
             if (mov.tipo === "Entrada" || mov.natureza === "Resgate") {
                 entradas += Number(mov.valor);
             } else if (mov.tipo === "Saída") {
@@ -672,9 +766,19 @@ function renderizarDia() {
             // Excluir uma retirada de meta devolve o valor para a meta.
             const movExcluida = movimentacoes.find(mov => mov.id === id);
 
+            // Excluir um empréstimo leva junto as devoluções e perdões dele.
+            const idsExcluir = idsParaExcluir(movExcluida, movimentacoes).map(String);
+
+            if (idsExcluir.length > 1) {
+
+                const ligados = idsExcluir.length - 1;
+
+                if (!confirm(`Esse empréstimo tem ${ligados} devolução(ões)/perdão registrado(s). Eles também serão excluídos. Continuar?`)) return;
+            }
+
             const resultadoMeta = await devolverValorParaMeta(movExcluida);
 
-            movimentacoes = movimentacoes.filter(mov => mov.id !== id);
+            movimentacoes = movimentacoes.filter(mov => !idsExcluir.includes(String(mov.id)));
 
             await localStorage.setItem("movimentacoes", JSON.stringify(movimentacoes));
 
@@ -696,7 +800,11 @@ function renderizarDia() {
                 }
             }
 
-            if (lembretesMudaram) {
+            // empréstimo: o lembrete acompanha o saldo em aberto
+            const lembretesFinais = sincronizarLembretesEmprestimo(movimentacoes, lembretes);
+
+            if (lembretesMudaram || JSON.stringify(lembretesFinais) !== JSON.stringify(lembretes)) {
+                lembretes = lembretesFinais;
                 await salvarLembretes();
             }
 
@@ -865,11 +973,14 @@ function renderizarLembretesDia() {
             </div>
             <div class="acoesLembreteCard">
                 <div class="linhaBotoes">
+                    ${lembrete.emprestimoId != null ? "" : `
                     <button class="icone btnEditarLembrete" data-id="${lembrete.id}" title="Editar">✏️</button>
-                    <button class="icone btnExcluirLembrete" data-id="${lembrete.id}" title="Excluir">🗑️</button>
+                    <button class="icone btnExcluirLembrete" data-id="${lembrete.id}" title="Excluir">🗑️</button>`}
                 </div>
                 <button class="btnPagarLembrete${pago ? " desfazer" : ""}" data-id="${lembrete.id}">
-                    ${pago ? "Desfazer" : (lembrete.tipoLembrete === "receber" ? "✅ Marcar como recebido" : "✅ Marcar como pago")}
+                    ${pago ? "Desfazer" : (lembrete.emprestimoId != null
+                        ? (lembrete.tipoLembrete === "receber" ? "💵 Registrar recebimento" : "💸 Registrar pagamento")
+                        : (lembrete.tipoLembrete === "receber" ? "✅ Marcar como recebido" : "✅ Marcar como pago"))}
                 </button>
                 ${podePularPrimeiroMes(lembrete, pago) ? `<button class="btnPularMes" data-id="${lembrete.id}">⏭️ Começar só no próximo mês</button>` : ""}
             </div>

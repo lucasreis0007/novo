@@ -1,4 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto } from "./utils.js";
+import { ehMovEmprestimo, ehMovEmprestimoNeutro, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -63,6 +64,9 @@ const gruposDeCategoria = ["Despesas", "Entradas", "Reserva e metas", "Outros"];
 function grupoDaMovimentacao(mov) {
 
     if (mov.natureza === "Despesa") return "Despesas";
+
+    // Empréstimos ficam fora de entradas e despesas; só o perdão é perda.
+    if (ehMovEmprestimo(mov)) return mov.natureza === NATUREZA_PERDAO ? "Despesas" : "Outros";
 
     if (
         ["Resgate", "Reserva", "Meta", "RendimentoMeta", "Rendimento", "Investimento"].includes(mov.natureza) ||
@@ -150,6 +154,9 @@ function rotuloNatureza(mov) {
     }
     if (mov.natureza === "RendimentoMeta") return "Rendimento da meta";
     if (mov.natureza === "Meta") return "Aporte na meta";
+    if (mov.natureza === NATUREZA_EMPRESTIMO) return mov.tipo === "Entrada" ? "Empréstimo recebido" : "Empréstimo concedido";
+    if (mov.natureza === NATUREZA_DEVOLUCAO) return mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo";
+    if (mov.natureza === NATUREZA_PERDAO) return "Empréstimo perdoado";
     if (mov.natureza === "Resgate") return textoNaturezaPdf.Resgate;
     if (mov.tipo === "Entrada") return "Entrada";
     if (mov.natureza === "Despesa") return "Despesa";
@@ -198,7 +205,8 @@ function movimentacoesFiltradasParaPdf() {
         .filter(passaFiltroCategoria)
         .filter(mov => {
             if (tipo === "todos") return true;
-            if (tipo === "Entrada") return mov.tipo === "Entrada" && mov.natureza !== "Transferência";
+            if (tipo === "Empréstimo") return ehMovEmprestimo(mov);
+            if (tipo === "Entrada") return mov.tipo === "Entrada" && mov.natureza !== "Transferência" && !ehMovEmprestimoNeutro(mov);
             if (tipo === "Despesa") return mov.tipo !== "Entrada" && mov.natureza === "Despesa";
             if (tipo === "Transferência") return mov.natureza === "Transferência";
             return mov.tipo !== "Entrada" && mov.natureza === tipo;
@@ -264,6 +272,8 @@ function gerarPdf() {
             return;
         }
         if (mov.natureza === "Meta" || mov.natureza === "RendimentoMeta") return;
+        // empréstimo e devolução só mudam o dinheiro de lugar
+        if (ehMovEmprestimoNeutro(mov)) return;
         if (mov.tipo === "Entrada") {
             entradas += Number(mov.valor);
         } else {
@@ -334,9 +344,12 @@ function atualizarResumo() {
             return;
         }
 
+        // empréstimo e devolução só mudam o dinheiro de lugar
+        if (ehMovEmprestimoNeutro(mov)) return;
+
         if (mov.tipo === "Entrada" || mov.natureza === "Resgate") {
             entradas += Number(mov.valor);
-        } else if (mov.natureza === "Despesa") {
+        } else if (mov.natureza === "Despesa" || mov.natureza === NATUREZA_PERDAO) {
             despesas += Number(mov.valor);
         } else if (["Reserva", "Meta", "Investimento"].includes(mov.natureza)) {
             guardado += Number(mov.valor);
@@ -381,7 +394,7 @@ function prepararDadosBarras() {
             .filter(mov =>
                 chaveMes(mov.data) === chave &&
                 (
-                    ((mov.tipo === "Entrada" || mov.natureza === "Resgate") && mov.natureza !== "Transferência") ||
+                    ((mov.tipo === "Entrada" || mov.natureza === "Resgate") && mov.natureza !== "Transferência" && !ehMovEmprestimoNeutro(mov)) ||
                     (filtrando && ehRetiradaMeta(mov))
                 )
             )
@@ -390,7 +403,7 @@ function prepararDadosBarras() {
 
     const despesasPorMes = meses.map(chave =>
         filtradas
-            .filter(mov => chaveMes(mov.data) === chave && mov.natureza === "Despesa")
+            .filter(mov => chaveMes(mov.data) === chave && (mov.natureza === "Despesa" || mov.natureza === NATUREZA_PERDAO))
             .reduce((total, mov) => total + Number(mov.valor), 0)
     );
 

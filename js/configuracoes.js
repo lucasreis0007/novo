@@ -83,6 +83,8 @@ document.getElementById("btnExportarPdf").addEventListener("click", () => {
     ordenadas.forEach(mov => {
         // Retirada de meta só muda o dinheiro de lugar, não é receita.
         if (mov.metaId) return;
+        // empréstimo e devolução só mudam o dinheiro de lugar
+        if (mov.natureza === "Empréstimo" || mov.natureza === "DevolucaoEmprestimo") return;
         if (mov.tipo === "Entrada") totalEntradas += Number(mov.valor);
         else totalSaidas += Number(mov.valor);
     });

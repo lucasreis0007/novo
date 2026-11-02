@@ -624,7 +624,7 @@ function popularCategorias() {
 
     categoriaSelect.innerHTML = '<option value="">Selecione</option>';
 
-    categorias.saida.forEach(item => {
+    categorias.saida.filter(item => item.natureza !== "Empréstimo" && item.natureza !== "Meta").forEach(item => {
         categoriaSelect.innerHTML += `<option value="${item.nome}">${iconeCategoriaTexto(item.nome, categorias)} ${item.nome}</option>`;
     });
 }
