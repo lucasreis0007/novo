@@ -6,6 +6,7 @@ import {
     ehMovEmprestimo,
     categoriaDoEmprestimo,
     categoriaDaDevolucao,
+    categoriaDoPerdao,
     idsParaExcluir,
     sincronizarLembretesEmprestimo,
     formatarMoeda as moedaEmprestimo,
@@ -843,7 +844,7 @@ async function salvarEdicaoEmprestimo() {
         movimentacoes.forEach(m => {
             if (m.emprestimoId == null || String(m.emprestimoId) !== String(mov.emprestimoId)) return;
             if (m.natureza === NATUREZA_DEVOLUCAO) m.categoria = categoriaDaDevolucao(direcao, pessoa);
-            if (m.natureza === NATUREZA_PERDAO) m.categoria = `Perdão de empréstimo: ${pessoa}`;
+            if (m.natureza === NATUREZA_PERDAO) m.categoria = categoriaDoPerdao(pessoa, m.direcao);
         });
 
     } else {

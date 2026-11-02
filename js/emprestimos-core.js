@@ -15,8 +15,10 @@
 //      - quando eu pago o que devo: tipo Saída da conta de onde saiu
 //    Aceita pagamento parcial: o saldo em aberto vai caindo.
 //
-//  • Perdão (natureza "PerdaoEmprestimo"), só para quem me deve: baixa o que
-//    faltava e conta como perda (despesa). Não mexe em nenhuma conta (banco "").
+//  • Perdão (natureza "PerdaoEmprestimo"). Nunca mexe em conta (banco ""):
+//      - de quem me devia (direcao "dado"): conta como perda (despesa);
+//      - da minha dívida (direcao "recebido"): só baixa o saldo devedor, sem
+//        contar como receita nem como gasto.
 //
 // Nada disso conta como receita nem como gasto comum: é dinheiro que só
 // muda de dono por um tempo.
@@ -34,11 +36,22 @@ export function ehMovEmprestimo(mov) {
 // Empréstimo e devolução só trocam dinheiro de lugar: ficam fora de
 // entradas, despesas e orçamentos. O perdão é a única parte que é perda.
 export function ehMovEmprestimoNeutro(mov) {
-    return Boolean(mov) && (mov.natureza === NATUREZA_EMPRESTIMO || mov.natureza === NATUREZA_DEVOLUCAO);
+    return Boolean(mov) && (
+        mov.natureza === NATUREZA_EMPRESTIMO ||
+        mov.natureza === NATUREZA_DEVOLUCAO ||
+        ehDividaPerdoada(mov)
+    );
 }
 
+// Perdão de uma dívida MINHA (peguei emprestado e a pessoa perdoou): só baixa
+// o saldo devedor. Não é receita nem gasto e não mexe em nenhuma conta.
+export function ehDividaPerdoada(mov) {
+    return Boolean(mov) && mov.natureza === NATUREZA_PERDAO && mov.direcao === "recebido";
+}
+
+// Perdão de quem ME devia: o que faltava vira perda (despesa).
 export function ehPerdaEmprestimo(mov) {
-    return Boolean(mov) && mov.natureza === NATUREZA_PERDAO;
+    return Boolean(mov) && mov.natureza === NATUREZA_PERDAO && !ehDividaPerdoada(mov);
 }
 
 function arredondar(valor) {
@@ -149,8 +162,10 @@ export function categoriaDaDevolucao(direcao, pessoa) {
     return direcao === "dado" ? `Devolução de ${pessoa}` : `Pagamento a ${pessoa}`;
 }
 
-export function categoriaDoPerdao(pessoa) {
-    return `Perdão de empréstimo: ${pessoa}`;
+export function categoriaDoPerdao(pessoa, direcao) {
+    return direcao === "recebido"
+        ? `Dívida perdoada por ${pessoa}`
+        : `Perdão de empréstimo: ${pessoa}`;
 }
 
 // Ids que devem sair juntos quando um lançamento é excluído: apagar o

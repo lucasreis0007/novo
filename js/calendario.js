@@ -6,6 +6,7 @@ import {
     sincronizarLembretesEmprestimo,
     ehMovEmprestimoNeutro,
     ehPerdaEmprestimo,
+    ehDividaPerdoada,
     NATUREZA_EMPRESTIMO,
     NATUREZA_DEVOLUCAO,
     NATUREZA_PERDAO
@@ -202,6 +203,10 @@ function classificarMovimentacao(mov) {
             sinal: "💵",
             texto: mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo"
         };
+    }
+
+    if (ehDividaPerdoada(mov)) {
+        return { classe: "emprestimo", sinal: "🙏", texto: "Dívida perdoada" };
     }
 
     if (mov.natureza === NATUREZA_PERDAO) {

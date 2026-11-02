@@ -220,7 +220,7 @@ function renderizar() {
                     <button type="button" class="btnRegistrar" data-id="${emprestimo.id}">
                         ${dado ? "💵 Registrar recebimento" : "💸 Registrar pagamento"}
                     </button>
-                    ${dado ? `<button type="button" class="btnPerdoar" data-id="${emprestimo.id}">🙏 Perdoar o que falta</button>` : ""}
+                    <button type="button" class="btnPerdoar" data-id="${emprestimo.id}">${dado ? "🙏 Perdoar o que falta" : "🙏 Dívida perdoada"}</button>
                 </div>
             ` : ""}
 
@@ -294,19 +294,24 @@ async function registrarDevolucao(id) {
     renderizar();
 }
 
-// Perdão: só para quem te deve. O que faltava vira perda (despesa) e o
-// empréstimo é encerrado. Não mexe em nenhuma conta.
+// Perdão. Nunca mexe em conta.
+//  - Quem te devia (dado): o que faltava vira perda (despesa).
+//  - Você devia (recebido): a dívida é baixada, sem contar como receita nem gasto.
 async function perdoar(id) {
 
     const movimentacoes = carregarMovimentacoes();
 
     const emprestimo = listarEmprestimos(movimentacoes).find(e => String(e.id) === String(id));
 
-    if (!emprestimo || emprestimo.saldo <= 0 || emprestimo.direcao !== "dado") return;
+    if (!emprestimo || emprestimo.saldo <= 0) return;
 
-    const confirmar = confirm(
-        `Perdoar ${formatarMoeda(emprestimo.saldo)} que ${emprestimo.pessoa} ainda te deve?\n\n` +
-        "Esse valor passa a contar como perda (despesa) e o empréstimo é encerrado."
+    const dado = emprestimo.direcao === "dado";
+
+    const confirmar = confirm(dado
+        ? `Perdoar ${formatarMoeda(emprestimo.saldo)} que ${emprestimo.pessoa} ainda te deve?\n\n` +
+          "Esse valor passa a contar como perda (despesa) e o empréstimo é encerrado."
+        : `${emprestimo.pessoa} perdoou os ${formatarMoeda(emprestimo.saldo)} que você ainda devia?\n\n` +
+          "A dívida é baixada e o empréstimo é encerrado. Não conta como receita e não mexe em nenhuma conta."
     );
 
     if (!confirmar) return;
@@ -316,11 +321,14 @@ async function perdoar(id) {
         tipo: "Saída",
         natureza: NATUREZA_PERDAO,
         emprestimoId: emprestimo.id,
+        direcao: emprestimo.direcao,
         banco: "",
-        categoria: categoriaDoPerdao(emprestimo.pessoa),
+        categoria: categoriaDoPerdao(emprestimo.pessoa, emprestimo.direcao),
         valor: emprestimo.saldo,
         data: hojeISO(),
-        descricao: `Perdão do que ${emprestimo.pessoa} devia`
+        descricao: dado
+            ? `Perdão do que ${emprestimo.pessoa} devia`
+            : `${emprestimo.pessoa} perdoou o que eu devia`
     });
 
     await salvarTudo(movimentacoes);

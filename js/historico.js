@@ -1,5 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto, iconeMovimentacao } from "./utils.js";
-import { idsParaExcluir, sincronizarLembretesEmprestimo, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
+import { ehDividaPerdoada, idsParaExcluir, sincronizarLembretesEmprestimo, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -281,6 +281,16 @@ function carregarMovimentacoes(){
             textoNatureza = mov.tipo==="Entrada"
                 ? "Devolução recebida"
                 : "Pagamento de empréstimo";
+
+        }
+
+        else if(ehDividaPerdoada(mov)){
+
+            classe="emprestimo-cor";
+
+            sinal="🙏";
+
+            textoNatureza="Dívida perdoada";
 
         }
 

@@ -1,5 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeCategoriaTexto } from "./utils.js";
-import { ehMovEmprestimo, ehMovEmprestimoNeutro, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
+import { ehMovEmprestimo, ehMovEmprestimoNeutro, ehPerdaEmprestimo, ehDividaPerdoada, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO, NATUREZA_PERDAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -66,7 +66,7 @@ function grupoDaMovimentacao(mov) {
     if (mov.natureza === "Despesa") return "Despesas";
 
     // Empréstimos ficam fora de entradas e despesas; só o perdão é perda.
-    if (ehMovEmprestimo(mov)) return mov.natureza === NATUREZA_PERDAO ? "Despesas" : "Outros";
+    if (ehMovEmprestimo(mov)) return ehPerdaEmprestimo(mov) ? "Despesas" : "Outros";
 
     if (
         ["Resgate", "Reserva", "Meta", "RendimentoMeta", "Rendimento", "Investimento"].includes(mov.natureza) ||
@@ -156,6 +156,7 @@ function rotuloNatureza(mov) {
     if (mov.natureza === "Meta") return "Aporte na meta";
     if (mov.natureza === NATUREZA_EMPRESTIMO) return mov.tipo === "Entrada" ? "Empréstimo recebido" : "Empréstimo concedido";
     if (mov.natureza === NATUREZA_DEVOLUCAO) return mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo";
+    if (ehDividaPerdoada(mov)) return "Dívida perdoada";
     if (mov.natureza === NATUREZA_PERDAO) return "Empréstimo perdoado";
     if (mov.natureza === "Resgate") return textoNaturezaPdf.Resgate;
     if (mov.tipo === "Entrada") return "Entrada";
@@ -349,7 +350,7 @@ function atualizarResumo() {
 
         if (mov.tipo === "Entrada" || mov.natureza === "Resgate") {
             entradas += Number(mov.valor);
-        } else if (mov.natureza === "Despesa" || mov.natureza === NATUREZA_PERDAO) {
+        } else if (mov.natureza === "Despesa" || ehPerdaEmprestimo(mov)) {
             despesas += Number(mov.valor);
         } else if (["Reserva", "Meta", "Investimento"].includes(mov.natureza)) {
             guardado += Number(mov.valor);
@@ -403,7 +404,7 @@ function prepararDadosBarras() {
 
     const despesasPorMes = meses.map(chave =>
         filtradas
-            .filter(mov => chaveMes(mov.data) === chave && (mov.natureza === "Despesa" || mov.natureza === NATUREZA_PERDAO))
+            .filter(mov => chaveMes(mov.data) === chave && (mov.natureza === "Despesa" || ehPerdaEmprestimo(mov)))
             .reduce((total, mov) => total + Number(mov.valor), 0)
     );
 

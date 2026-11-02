@@ -1,5 +1,5 @@
 import { protegerPagina, carregarDados, criarArmazenamento, sair, iconeCategoria, iconeMovimentacao, iconeCategoriaTexto, ocorrenciaMensalValida } from "./utils.js";
-import { ehMovEmprestimo, totaisEmprestimos, NATUREZA_PERDAO, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO } from "./emprestimos-core.js";
+import { ehMovEmprestimo, ehDividaPerdoada, totaisEmprestimos, NATUREZA_PERDAO, NATUREZA_EMPRESTIMO, NATUREZA_DEVOLUCAO } from "./emprestimos-core.js";
 
 const usuarioLogado = await protegerPagina();
 const dadosUsuario = await carregarDados(usuarioLogado.uid);
@@ -73,6 +73,12 @@ function atualizarResumo(inicio, fim) {
         if (ehMovEmprestimo(mov)) {
 
             const valorMov = Number(mov.valor);
+
+            // dívida minha perdoada: o "a pagar" diminui, sem receita nem gasto
+            if (ehDividaPerdoada(mov)) {
+                emprestimosLiquido += valorMov;
+                return;
+            }
 
             if (mov.natureza === NATUREZA_PERDAO) {
                 despesas += valorMov;
@@ -452,6 +458,10 @@ function renderizarUltimasMovimentacoes() {
             classe = "emprestimo-cor";
             sinal = "💵";
             textoNatureza = mov.tipo === "Entrada" ? "Devolução recebida" : "Pagamento de empréstimo";
+        } else if (ehDividaPerdoada(mov)) {
+            classe = "emprestimo-cor";
+            sinal = "🙏";
+            textoNatureza = "Dívida perdoada";
         } else if (mov.natureza === NATUREZA_PERDAO) {
             classe = "despesa";
             sinal = "🙏";
