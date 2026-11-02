@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Empréstimos</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/emprestimos.css">
+
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <button class="voltar" onclick="window.location.href='dashboard.html'">←</button>
+
+    <div class="header-texto">
+
+        <h1>🤝 Empréstimos</h1>
+
+        <p>Quem te deve e o que você deve</p>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <!-- Resumo -->
+    <section class="resumo">
+
+        <div class="resumo-card receber">
+            <p>A receber</p>
+            <h2 id="totalAReceber">R$ 0,00</h2>
+        </div>
+
+        <div class="resumo-card pagar">
+            <p>A pagar</p>
+            <h2 id="totalAPagar">R$ 0,00</h2>
+        </div>
+
+    </section>
+
+    <!-- Empréstimos antigos (lançados como despesa) -->
+    <section class="aviso-migracao" id="avisoMigracao" style="display:none;">
+        <p id="textoMigracao"></p>
+        <button type="button" class="btnMigrar" id="btnMigrar">Converter agora</button>
+    </section>
+
+    <button type="button" class="btnNovo" onclick="window.location.href='adicionar.html'">
+        ➕ Novo empréstimo
+    </button>
+
+    <p class="dica-novo">
+        Para emprestar, lance uma <strong>Saída</strong> na categoria Empréstimo. Para pegar emprestado, lance uma <strong>Entrada</strong> em "Peguei emprestado".
+    </p>
+
+    <!-- Abas -->
+    <div class="abas">
+        <button class="aba ativa" id="abaAbertos" type="button">Em aberto</button>
+        <button class="aba" id="abaEncerrados" type="button">Encerrados</button>
+    </div>
+
+    <section class="emprestimos" id="listaEmprestimos">
+        <!-- Empréstimos aparecerão aqui -->
+    </section>
+
+</main>
+
+<script type="module" src="../js/emprestimos.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+
+</html>
