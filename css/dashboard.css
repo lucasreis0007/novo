@@ -232,6 +232,18 @@ body{
     border-left:6px solid #0d9488;
 }
 
+.card.emprestimo-card{
+    border-left:6px solid #7c3aed;
+}
+
+.card.emprestimo-card.divida{
+    border-left-color:#db2777;
+}
+
+.movimentacao .emprestimo-cor{
+    color:#7c3aed;
+}
+
 .card.investimento{
     border-left:6px solid #6d28d9;
 }

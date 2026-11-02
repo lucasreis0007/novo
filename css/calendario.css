@@ -579,6 +579,10 @@ body{
     color:#d97706;
 }
 
+.movimentacaoDia .valor.emprestimo{
+    color:#7c3aed;
+}
+
 .movimentacaoDia .valor.investimento{
     color:#6d28d9;
 }
