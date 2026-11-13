@@ -428,6 +428,9 @@ export function ocorrenciaMensalValida(lembrete, dataISO) {
 
     if (lembrete.pagamentos && lembrete.pagamentos[`${ano}-${mes}`]) return true;
 
+    // depois do último vencimento o lembrete mensal deixa de aparecer
+    if (lembrete.dataFim && dataISO > lembrete.dataFim) return false;
+
     const inicio = dataInicioLembrete(lembrete);
 
     return !inicio || dataISO >= inicio;

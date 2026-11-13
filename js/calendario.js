@@ -51,6 +51,8 @@ const lembreteInicio = document.getElementById("lembreteInicio");
 const campoLembreteInicio = document.getElementById("campoLembreteInicio");
 const rotuloLembreteInicio = document.getElementById("rotuloLembreteInicio");
 const dicaInicioLembrete = document.getElementById("dicaInicioLembrete");
+const lembreteFim = document.getElementById("lembreteFim");
+const campoLembreteFim = document.getElementById("campoLembreteFim");
 const btnSalvarLembrete = document.getElementById("btnSalvarLembrete");
 const btnCancelarLembrete = document.getElementById("btnCancelarLembrete");
 
@@ -840,6 +842,7 @@ function atualizarCampoInicioLembrete() {
     const recorrente = lembreteRecorrente.checked;
 
     campoLembreteInicio.style.display = "";
+    campoLembreteFim.style.display = recorrente ? "" : "none";
     rotuloLembreteInicio.textContent = recorrente ? "Primeiro vencimento" : "Data do lembrete";
 
     const escolhida = lembreteInicio.value;
@@ -900,6 +903,7 @@ function fecharPainelLembrete() {
     lembreteObservacao.value = "";
     lembreteRecorrente.checked = true;
     lembreteInicio.value = "";
+    lembreteFim.value = "";
     inicioLembreteOriginal = "";
     lembreteBanco.value = "";
     lembreteCategoria.value = "";
@@ -925,6 +929,7 @@ function abrirEdicaoLembrete(lembrete) {
         : (lembrete.data || diaSelecionadoISO);
 
     lembreteInicio.value = inicioLembreteOriginal;
+    lembreteFim.value = lembrete.recorrente ? (lembrete.dataFim || "") : "";
     atualizarCampoInicioLembrete();
 
     // Empréstimo (receber) usa a conta do empréstimo original, então não
@@ -972,7 +977,9 @@ function renderizarLembretesDia() {
             <div class="infoLembrete">
                 <h3>${lembrete.tipoLembrete === "receber" ? "💰" : "🔔"} ${lembrete.titulo}</h3>
                 ${lembrete.valor ? `<p>${formatarMoeda(lembrete.valor)}</p>` : ""}
-                <p>${lembrete.recorrente ? "Repete todo mês" : "Lembrete único"}</p>
+                <p>${lembrete.recorrente
+                    ? (lembrete.dataFim ? `Repete todo mês até ${formatarDataBrLembrete(lembrete.dataFim)}` : "Repete todo mês")
+                    : "Lembrete único"}</p>
                 ${lembrete.observacao ? `<p>${lembrete.observacao}</p>` : ""}
                 <span class="selo ${pago ? "pago" : "pendente"}">${lembrete.tipoLembrete === "receber" ? (pago ? "Recebido" : "A receber") : (pago ? "Pago" : "Pendente")}</span>
             </div>
@@ -1085,6 +1092,14 @@ btnSalvarLembrete.addEventListener("click", async () => {
     const inicioEscolhido = lembreteInicio.value || diaSelecionadoISO;
     const diaDoInicio = paraDataLocal(inicioEscolhido).getDate();
 
+    // data em que o lembrete mensal termina (vazio = sem fim)
+    const fimEscolhido = recorrente ? lembreteFim.value : "";
+
+    if (fimEscolhido && fimEscolhido < inicioEscolhido) {
+        alert("A data de término não pode ser antes da data de início.");
+        return;
+    }
+
     if (lembreteEditandoId !== null) {
 
         const lembrete = lembretes.find(l => l.id === lembreteEditandoId);
@@ -1114,6 +1129,9 @@ btnSalvarLembrete.addEventListener("click", async () => {
 
                 lembrete.dataInicio = inicioEscolhido;
 
+                if (fimEscolhido) lembrete.dataFim = fimEscolhido;
+                else delete lembrete.dataFim;
+
                 // o dia do mês só muda se a pessoa mexeu na data de início
                 if (!lembrete.diaDoMes || inicioEscolhido !== inicioLembreteOriginal) {
                     lembrete.diaDoMes = diaDoInicio;
@@ -1125,6 +1143,7 @@ btnSalvarLembrete.addEventListener("click", async () => {
                 lembrete.data = inicioEscolhido;
                 delete lembrete.diaDoMes;
                 delete lembrete.dataInicio;
+                delete lembrete.dataFim;
             }
         }
 
@@ -1144,6 +1163,7 @@ btnSalvarLembrete.addEventListener("click", async () => {
         if (recorrente) {
             novoLembrete.diaDoMes = diaDoInicio;
             novoLembrete.dataInicio = inicioEscolhido;
+            if (fimEscolhido) novoLembrete.dataFim = fimEscolhido;
         } else {
             novoLembrete.data = inicioEscolhido;
         }
