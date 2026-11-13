@@ -327,7 +327,8 @@ body{
 }
 
 .campoLembrete input[type="text"],
-.campoLembrete input[type="number"]{
+.campoLembrete input[type="number"],
+.campoLembrete input[type="date"]{
     padding:11px 12px;
     border:1px solid #ddd;
     border-radius:10px;
@@ -335,7 +336,8 @@ body{
 }
 
 .campoLembrete input[type="text"]:focus,
-.campoLembrete input[type="number"]:focus{
+.campoLembrete input[type="number"]:focus,
+.campoLembrete input[type="date"]:focus{
     outline:none;
     border-color:#d97706;
 }
