@@ -19,6 +19,7 @@
         { arquivo: "categorias.html", icone: "🏷️", nome: "Categorias" },
         { arquivo: "orcamentos.html", icone: "📊", nome: "Orçamentos" },
         { arquivo: "relatorios.html", icone: "📈", nome: "Relatórios" },
+        { arquivo: "notificacoes.html", icone: "🔔", nome: "Notificações" },
         { arquivo: "configuracoes.html", icone: "⚙️", nome: "Configurações" }
     ];
 

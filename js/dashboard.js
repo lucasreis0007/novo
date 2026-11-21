@@ -993,6 +993,10 @@ function notificarLembretesPendentesDash(itens) {
     if (Notification.permission !== "granted") return;
     if (!itens || itens.length === 0) return;
 
+    // Se os avisos agendados (push) estão ativos neste aparelho, é o servidor
+    // que avisa no horário escolhido; aqui não repete a mesma notificação.
+    if (window.localStorage.getItem("financas_push_ativo") === "1") return;
+
     // Chave só pra lembrar, NESSE aparelho, que já notificamos hoje.
     // Usa de propósito o localStorage REAL do navegador (window.localStorage)
     // em vez do "localStorage" simulado (que vai pro Firestore) — isso
@@ -1086,6 +1090,12 @@ renderizarAlertasDashboard(infoLembretesDashboard);
 
 atualizarStatusNotificacoesDash();
 notificarLembretesPendentesDash([...infoLembretesDashboard.atrasados, ...infoLembretesDashboard.hoje]);
+
+// Avisos agendados (push): mantém a inscrição deste aparelho em dia.
+// Só age se o usuário já ativou na tela Notificações; falhas são ignoradas.
+import("./notificacoes-push.js")
+    .then(modulo => modulo.renovarSeNecessario(usuarioLogado.uid, dadosUsuario))
+    .catch(() => {});
 
 
 // ======================================================================
