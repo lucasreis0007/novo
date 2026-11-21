@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Notificações</title>
+
+    <link rel="manifest" href="../manifest.json">
+
+    <meta name="theme-color" content="#4F46E5">
+
+    <link rel="apple-touch-icon" href="../img/icons/icon-192.png">
+
+    <link rel="icon" href="../img/icons/icon-192.png">
+
+    <link rel="stylesheet" href="../css/configuracoes.css">
+
+    <link rel="stylesheet" href="../css/notificacoes.css">
+
+    <link rel="stylesheet" href="../css/nav-lateral.css">
+
+</head>
+
+<body>
+
+<header class="header">
+
+    <button class="voltar" onclick="window.location.href='configuracoes.html'">←</button>
+
+    <div class="header-texto">
+
+        <h1>🔔 Notificações</h1>
+
+        <p>Avisos de vencimento, mesmo com o app fechado</p>
+
+    </div>
+
+</header>
+
+<main class="container">
+
+    <!-- Este aparelho -->
+    <section class="bloco">
+
+        <h2>📱 Este aparelho</h2>
+
+        <p class="descricao" id="statusAparelho">Verificando...</p>
+
+        <div id="guiaAparelho" class="aviso-info oculto"></div>
+
+        <button class="botao-primario oculto" id="btnAtivar">Ativar notificações neste aparelho</button>
+        <button class="botao-secundario oculto" id="btnTeste">Enviar notificação de teste (chega em 1 minuto)</button>
+        <button class="botao-secundario oculto" id="btnDesativar">Desativar neste aparelho</button>
+
+        <p class="erro oculto" id="erroAparelho"></p>
+        <p class="sucesso oculto" id="sucessoAparelho"></p>
+
+    </section>
+
+    <!-- Avisos padrão -->
+    <section class="bloco">
+
+        <h2>⏰ Avisos padrão</h2>
+        <p class="descricao">Valem para todo lembrete que não tenha avisos próprios. Cada aviso diz quantos dias antes do vencimento e a que horas.</p>
+
+        <label class="linha-opcao">
+            <input type="checkbox" id="usarPadrao">
+            <span>Aplicar os avisos padrão aos meus lembretes</span>
+        </label>
+
+        <div id="listaPadrao" class="lista-avisos"></div>
+
+        <button class="botao-secundario" id="btnAddPadrao">+ Adicionar aviso</button>
+        <button class="botao-primario" id="btnSalvarPadrao">Salvar avisos padrão</button>
+
+        <p class="sucesso oculto" id="sucessoPadrao"></p>
+
+    </section>
+
+    <!-- Programados -->
+    <section class="bloco">
+
+        <h2>🗓️ Lembretes programados</h2>
+        <p class="descricao">O próximo vencimento de cada lembrete e quando cada aviso será enviado. Contas pagas saem da lista sozinhas.</p>
+
+        <div id="listaProgramados"></div>
+
+    </section>
+
+</main>
+
+<script type="module" src="../js/notificacoes.js"></script>
+
+<script src="../js/pwa.js"></script>
+
+<script src="../js/nav-lateral.js"></script>
+
+</body>
+</html>
