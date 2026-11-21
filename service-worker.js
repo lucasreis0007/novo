@@ -1,4 +1,4 @@
-const CACHE_NOME = "financas-cache-v44";
+const CACHE_NOME = "financas-cache-v45";
 
 const ARQUIVOS_PARA_CACHE = [
     "./",
@@ -60,6 +60,13 @@ const ARQUIVOS_PARA_CACHE = [
     "./pages/configuracoes.html",
     "./css/configuracoes.css",
     "./js/configuracoes.js",
+
+    "./pages/notificacoes.html",
+    "./css/notificacoes.css",
+    "./js/notificacoes.js",
+    "./js/notificacoes-core.js",
+    "./js/notificacoes-push.js",
+    "./js/notificacoes-config.js",
 
     "./pages/transferencia.html",
     "./css/transferencia.css",
@@ -152,25 +159,71 @@ self.addEventListener("fetch", (evento) => {
 });
 
 // ---------------- NOTIFICAÇÕES (lembretes) ----------------
-// O dashboard.js dispara notificações locais chamando
-// registration.showNotification(...) diretamente (não é push de
-// servidor). Esse handler só cuida do clique: ao tocar na notificação,
-// abre o app já no Dashboard (ou foca a aba se já estiver aberta).
+// Há dois caminhos:
+//  1. Notificação local: o dashboard.js chama registration.showNotification
+//     quando o app está aberto (sem servidor).
+//  2. Push agendado: o Worker (pasta worker/) envia um Web Push no horário
+//     escolhido e este service worker o exibe — funciona com o app fechado.
+// O clique é tratado igual nos dois: abre (ou foca) a tela indicada.
+
+// Push recebido do servidor. SEMPRE exibe a notificação na hora: o Safari
+// do iPhone revoga a permissão se um push chegar e nada for mostrado.
+self.addEventListener("push", (evento) => {
+
+    let dados = {};
+
+    try {
+        dados = evento.data ? evento.data.json() : {};
+    } catch (erro) {
+        dados = { body: evento.data ? evento.data.text() : "" };
+    }
+
+    evento.waitUntil(
+        self.registration.showNotification(dados.title || "🔔 Finanças", {
+            body: dados.body || "",
+            icon: "./img/icons/icon-192.png",
+            badge: "./img/icons/icon-192.png",
+            tag: dados.tag || undefined,
+            data: { url: dados.url || "pages/dashboard.html" }
+        })
+    );
+});
+
+// O sistema às vezes troca a inscrição de push (principalmente no iPhone).
+// Tenta renovar aqui; se não der, o app regrava a inscrição na próxima
+// vez que for aberto (js/notificacoes-push.js).
+self.addEventListener("pushsubscriptionchange", (evento) => {
+
+    const opcoes = evento.oldSubscription && evento.oldSubscription.options;
+    if (!opcoes) return;
+
+    evento.waitUntil(
+        self.registration.pushManager.subscribe(opcoes).catch(() => {})
+    );
+});
+
 self.addEventListener("notificationclick", (evento) => {
 
     evento.notification.close();
+
+    const destino = new URL(
+        (evento.notification.data && evento.notification.data.url) || "pages/dashboard.html",
+        self.registration.scope
+    ).href;
+
+    const nomeArquivo = destino.split("/").pop().split("?")[0];
 
     evento.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then((listaClients) => {
 
             for (const cliente of listaClients) {
-                if (cliente.url.includes("dashboard.html") && "focus" in cliente) {
+                if (cliente.url.includes(nomeArquivo) && "focus" in cliente) {
                     return cliente.focus();
                 }
             }
 
             if (clients.openWindow) {
-                return clients.openWindow("./pages/dashboard.html");
+                return clients.openWindow(destino);
             }
         })
     );
